@@ -1912,6 +1912,13 @@ pkg.HtmlElement = Class(pkg.Panel, [
             return this;
         };
 
+        this.setAttributes = function(attrs) {
+            for(var name in attrs) {
+                this.element.setAttribute(name, attrs[name]);
+            }
+            return this;
+        };
+
         this.paint = function(g) {
             // this method is used as an indication that the component
             // is visible and no one of his parent is invisible
