@@ -212,6 +212,25 @@ pkg.isBoolean  = isBoolean;
 pkg.$caller    = null; // current method which is called
 
 
+var Map = Map;
+if (Map === undefined) {
+    var nextId = 1;
+    Map = function () {
+        this.map = {};
+    };
+    Map.prototype.get = function (key) {
+        if (key != null && key.hasOwnProperty('__unique_id__')) {
+            return this.map[key.__unique_id__];
+        }
+    };
+    Map.prototype.set = function (key, value) {
+        if (!key.hasOwnProperty('__unique_id__')) {
+            key.__unique_id__ = nextId++;
+        }
+        this.map[key.__unique_id__] = value;
+    };
+}
+
 pkg.clone = function (obj, map) {
     map = map || new Map();
 
