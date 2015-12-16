@@ -1935,6 +1935,12 @@ pkg.HtmlElement = Class(pkg.Panel, [
             return this;
         };
 
+        this.setClassName = function(value) {
+            this.element.setAttribute("class", value);
+            this.vrp();
+            return this;
+        };
+
         this.paint = function(g) {
             // this method is used as an indication that the component
             // is visible and no one of his parent is invisible
