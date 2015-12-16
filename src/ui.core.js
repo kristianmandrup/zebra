@@ -2726,7 +2726,12 @@ pkg.ViewPan = Class(pkg.Panel, [
          * @readOnly
          */
         this.view = null;
-        this.scale = 1;
+        this.scaleX = 1;
+        this.scaleY = 1;
+
+        this.setScale = function (scale) {
+            this.scaleX = this.scaleY = scale;
+        };
 
         this.paint = function (g){
             if (this.view != null){
@@ -2773,9 +2778,11 @@ pkg.ViewPan = Class(pkg.Panel, [
         this.calcPreferredSize = function (t) {
             if (this.view != null) {
                 var ps = this.view.getPreferredSize();
-                if (this.scale && this.scale > 0) {
-                    ps.width = ps.width * this.scale;
-                    ps.height = ps.height * this.scale;
+                if (this.scaleX && this.scaleX > 0) {
+                    ps.width = ps.width * this.scaleX;
+                }
+                if (this.scaleY && this.scaleY > 0) {
+                    ps.height = ps.height * this.scaleY;
                 }
                 return ps;
             }
