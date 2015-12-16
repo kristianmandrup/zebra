@@ -342,7 +342,7 @@ pkg.HtmlElementMan = Class(pkg.Manager, [
 
 pkg.HtmlFocusableElement = Class(pkg.HtmlElement, [
     function $prototype() {
-        this.$getFocusHolderElement = function() {
+        this.$getElementRootFocus = function() {
             return this.element;
         };
     }
@@ -388,6 +388,29 @@ pkg.HtmlTextInput = Class(pkg.HtmlFocusableElement, [
         this.$super(e);
         this.setAttribute("tabindex", 0);
         this.setValue(text);
+
+        var input = this.element;
+        input.addEventListener('mouseover', function (e) {
+            e.stopPropagation();
+        }, false);
+        input.addEventListener('mousemove', function (e) {
+            e.stopPropagation();
+        }, false);
+        input.addEventListener('mouseout', function (e) {
+            e.stopPropagation();
+        }, false);
+        input.addEventListener('mousedown', function (e) {
+            e.stopPropagation();
+        }, false);
+        input.addEventListener('mouseup', function (e) {
+            e.stopPropagation();
+        }, false);
+        input.addEventListener('mouseenter', function (e) {
+            e.stopPropagation();
+        }, false);
+        input.addEventListener('mouseleave', function (e) {
+            e.stopPropagation();
+        }, false);
     }
 ]);
 

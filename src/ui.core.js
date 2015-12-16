@@ -3069,6 +3069,9 @@ pkg.FocusManager = Class(pkg.Manager, [
          * @method requestFocus
          */
         this.requestFocus = function(c) {
+            if (c != null && !this.isFocusable(c)) {
+                c = null;
+            }
             if (c != this.focusOwner && (c == null || this.isFocusable(c))) {
                 var oldFocusOwner = this.focusOwner;
                 if (c != null) {
@@ -3117,9 +3120,9 @@ pkg.FocusManager = Class(pkg.Manager, [
                 // to fix it a timer is used
                 if (document.activeElement !== e.source.getCanvas().$container) {
                     var $this = this;
-                    setTimeout(function() {
+//                    setTimeout(function() {
                         $this.requestFocus(e.source);
-                    }, 50);
+//                    }, 50);
                 }
                 else {
                     this.requestFocus(e.source);

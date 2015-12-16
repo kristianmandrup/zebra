@@ -893,7 +893,10 @@
                     //TODO: this calling prevents generation of phantom mouse move event
                     //but it is not clear if it will stop firing touch end/move events
                     //for some mobile browsers. Check it !
-                    e.preventDefault();
+                    var tagName = e.target.tagName.toLowerCase();
+                    if (tagName !== 'input' && tagName !== 'textarea' || e.target.hasAttribute('readonly')) {
+                        e.preventDefault();
+                    }
 
                 }, false);
 
@@ -905,7 +908,12 @@
                         $this.$UP(tt.identifier, tt, TOUCH_STUB);
                     }
 
-                    e.preventDefault();
+                    console.log("2. touchend() " + TOUCH_STUB.touchCounter);
+                    var tagName = e.target.tagName.toLowerCase();
+                    if (tagName !== 'input' && tagName !== 'textarea' || e.target.hasAttribute('readonly')) {
+                        e.preventDefault();
+                    }
+
                 }, false);
 
                 element.addEventListener("touchmove", function(e) {
