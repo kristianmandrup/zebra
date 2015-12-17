@@ -5024,9 +5024,9 @@ pkg.MobileScrollMan = Class(pkg.Manager, [
                 (e.direction === "bottom" || e.direction === "top") &&
                 this.target.vBar != null &&
                 this.target.vBar.isVisible === true &&
-                e.touch.dy !== 0)  // TODO: what is it ?
+                e.dy !== 0)
             {
-                this.$dt = 2 * e.touch.dy;   // TODO: what is it ?
+                this.$dt = 2 * e.dy;
                 var $this = this, bar = this.target.vBar, k = 0;
 
                 this.timer = setInterval(function() {

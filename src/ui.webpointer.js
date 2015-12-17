@@ -327,7 +327,7 @@
 
                                 // using gamma we can figure out direction
                                 if (gamma > -PI4) {
-                                    d = (gamma < PI4) ? "right" : (gamma < PI4_3 ? "buttom" : "left");
+                                    d = (gamma < PI4) ? "right" : (gamma < PI4_3 ? "bottom" : "left");
                                 }
                                 else {
                                     d = (gamma > -PI4_3) ? "top" : "left";
@@ -931,7 +931,7 @@
                         if (t != null && (t.pageX != Math.floor(nmt.pageX) ||
                                           t.pageY != Math.floor(nmt.pageY))  )
                         {
-                            $this.$DRAG(t.identifier, t, TOUCH_STUB);
+                            $this.$DRAG(nmt.identifier, nmt, TOUCH_STUB);
                         }
                     }
 
