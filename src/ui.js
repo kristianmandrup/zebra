@@ -2880,7 +2880,15 @@ pkg.ScrollPan = Class(pkg.Panel, [
                 };
 
                 this.doLayout = function(t) {
-                    t.kids[0].toPreferredSize();
+                    var kid = t.kids[0];
+                    if (kid.constraints === L.STRETCH) {
+                        var ps = kid.getPreferredSize();
+                        var w = t.parent.hBar != null ? ps.width : t.width;
+                        var h = t.parent.vBar != null ? ps.height : t.height;
+                        kid.setSize(w, h);
+                    } else {
+                        kid.toPreferredSize();
+                    }
                 };
             }
         ]);
