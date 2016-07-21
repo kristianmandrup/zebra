@@ -1,9 +1,8 @@
-(function(pkg, Class) {
+zebkit.package("ui", function(pkg, Class) {
 
 /**
  * @module ui
  */
-var ME = pkg.MouseEvent, KE = pkg.KeyEvent, PO = zebra.util.Position;
 
 /**
  * Text field UI component. The component is designed to enter single line, multi lines or password text.
@@ -16,12 +15,12 @@ var ME = pkg.MouseEvent, KE = pkg.KeyEvent, PO = zebra.util.Position;
     - Read-only mode
 
  * @constructor
- * @param {String|zebra.data.TextModel|zebra.ui.TextRender} [txt] a text the text field component
+ * @param {String|zebkit.data.TextModel|zebkit.ui.TextRender} [txt] a text the text field component
  * has to be filled. The parameter can be a simple string, text model or text render class instance.
  * @param {Integer} [maxCol] a maximal size of entered text. -1 means the size of the edited text
  * has no length limit.
- * @class zebra.ui.TextField
- * @extends zebra.ui.Label
+ * @class zebkit.ui.TextField
+ * @extends zebkit.ui.Label
  */
 pkg.TextField = Class(pkg.Label, [
     function $clazz() {
@@ -29,6 +28,10 @@ pkg.TextField = Class(pkg.Label, [
     },
 
     function $prototype() {
+        this.vkMode = "indirect";
+        this.startLine = this.startCol = this.endLine = this.endCol = this.curX = 0;
+        this.startOff = this.endOff = -1;
+
         /**
          * Selection color
          * @attribute  selectionColor
@@ -51,19 +54,18 @@ pkg.TextField = Class(pkg.Label, [
 
         this.cursorType = pkg.Cursor.TEXT;
 
-
         /**
          * Text alignment
          * @attribute textAlign
-         * @type {Integer}
-         * @default zebra.layout.LEFT
+         * @type {String}
+         * @default "left"
          */
-        this.textAlign = zebra.layout.LEFT;
+        this.textAlign = "left";
 
         /**
          * Cursor view
          * @attribute curView
-         * @type {zebra.ui.View}
+         * @type {zebkit.ui.View}
          * @readOnly
          */
 
@@ -95,7 +97,6 @@ pkg.TextField = Class(pkg.Label, [
         };
 
         this.setTextAlign = function(a) {
-            a = zebra.layout.$constraints(a)
             if (this.textAlign != a) {
                 this.textAlign = a;
                 this.vrp();
@@ -133,8 +134,6 @@ pkg.TextField = Class(pkg.Label, [
                                 off = start;
                             }
                         }
-
-
                         this.remove(start, end - start);
                     }
 
@@ -160,7 +159,7 @@ pkg.TextField = Class(pkg.Label, [
             // normalize text location to virtual (zero, zero)
             y -= (this.scrollManager.getSY() + this.getTop());
             x -= this.scrollManager.getSX();
-            if (this.textAlign === zebra.layout.LEFT) {
+            if (this.textAlign === "left") {
                 x -= this.getLeft();
             }
             else {
@@ -169,15 +168,15 @@ pkg.TextField = Class(pkg.Label, [
 
             if (x >= 0 && y >= 0 && lines > 0) {
                 var lh = this.view.getLineHeight(),
-                    li = this.view.getLineIndent(),
-                    row = (y < 0) ? 0 : ~~((y + li) / (lh + li)) + ((y + li) % (lh + li) > li ? 1 : 0) -1;
+                    li = this.view.lineIndent,
+                    row = (y < 0) ? 0 : Math.floor((y + li) / (lh + li)) + ((y + li) % (lh + li) > li ? 1 : 0) -1;
 
                 if (row < lines && row >= 0) {
                     var s    = this.view.getLine(row),
                         pdt  = 1000000,
                         pcol = -1;
 
-                    for(var col = ~~((x / this.view.lineWidth(row)) * s.length); col >= 0 && col <= s.length;) {
+                    for(var col = Math.floor((x / this.view.calcLineWidth(row)) * s.length); col >= 0 && col <= s.length;) {
                         var l  = this.view.font.charsWidth(s, 0, col),
                             dt = Math.abs(l - x);
 
@@ -202,40 +201,46 @@ pkg.TextField = Class(pkg.Label, [
             var ln = t.getLine(line);
             col += d;
             if (col < 0 && line > 0) {
-                return [line - 1, t.getLine(line - 1).length];
+                return { row: line - 1, col : t.getLine(line - 1).length };
             }
             else {
-                if (col > ln.length && line < t.getLines() - 1) return [line + 1, 0];
+                if (col > ln.length && line < t.getLines() - 1) return { row : line + 1, col : 0 };
             }
 
             var b = false;
             for(; col >= 0 && col < ln.length; col += d){
                 if (b) {
                     if (d > 0) {
-                        if (zebra.util.isLetter(ln[col])) return [line, col];
+                        if (zebkit.util.isLetter(ln[col])) return { row:line, col:col };
                     }
                     else {
-                        if (!zebra.util.isLetter(ln[col])) return [line, col + 1];
+                        if (!zebkit.util.isLetter(ln[col])) return { row : line, col: col + 1 };
                     }
                 }
                 else  {
-                    b = d > 0 ? !zebra.util.isLetter(ln[col]) : zebra.util.isLetter(ln[col]);
+                    b = d > 0 ? !zebkit.util.isLetter(ln[col]) : zebkit.util.isLetter(ln[col]);
                 }
             }
-            return (d > 0 ? [line, ln.length ]: [line, 0]);
+            return (d > 0 ? { row: line, col : ln.length }: { row : line, col : 0 } );
         };
 
-        // accumulate text model lines into string by the given start and end offsets
+        // collect text model lines into string by the given start and end offsets
         // r     - text view
         // start - start offset
         // end   - end offset
-        this.getSubString = function(r,start,end){
-            var res = [], sr = start[0], er = end[0], sc = start[1], ec = end[1];
+        this.getSubString = function(r, start, end){
+            var res = [], sr = start.row, er = end.row, sc = start.col, ec = end.col;
             for(var i = sr; i < er + 1; i++){
                 var ln = r.getLine(i);
-                if (i != sr) res.push('\n');
-                else ln = ln.substring(sc);
-                if (i == er) ln = ln.substring(0, ec - ((sr == er) ? sc : 0));
+                if (i != sr) {
+                    res.push('\n');
+                } else {
+                    ln = ln.substring(sc);
+                }
+
+                if (i === er) {
+                    ln = ln.substring(0, ec - ((sr === er) ? sc : 0));
+                }
                 res.push(ln);
             }
             return res.join('');
@@ -263,13 +268,17 @@ pkg.TextField = Class(pkg.Label, [
         };
 
         this.keyTyped = function(e) {
-            if (this.isEditable === true && e.isControlPressed() == false && e.isCmdPressed() == false) {
+            if (this.isEditable === true && e.ctrlKey === false && e.metaKey === false) {
                 this.write(this.position.offset, e.ch);
             }
         };
 
-        this.selectAll_command = function() {
+        this.selectAll = function() {
             this.select(0, this.getMaxOffset());
+        };
+
+        this.selectAll_command = function() {
+            this.selectAll();
         };
 
         this.nextWord_command = function(b, d) {
@@ -277,55 +286,52 @@ pkg.TextField = Class(pkg.Label, [
             var p = this.findNextWord(this.view.target, this.position.currentLine,
                                                         this.position.currentCol, d);
             if (p != null) {
-                this.position.setRowCol(p[0], p[1]);
+                this.position.setRowCol(p.row, p.col);
             }
         };
 
         this.nextPage_command = function(b, d) {
             if (b) this.startSelection();
-            this.position.seekLineTo(d == 1 ? PO.DOWN : PO.UP, this.pageSize());
+            this.position.seekLineTo(d === 1 ? "down" : "up", this.pageSize());
         };
 
         this.keyPressed = function(e) {
             if (this.isFiltered(e) === false)  {
                 var position    = this.position,
-                    col         = position.currentCol,
-                    isShiftDown = e.isShiftPressed(),
                     line        = position.currentLine,
                     foff        = 1;
 
-
-                if (isShiftDown) {
+                if (e.shiftKey) {
                     this.startSelection();
                 }
 
                 switch(e.code) {
-                    case KE.DOWN : position.seekLineTo(PO.DOWN);break;
-                    case KE.UP   : position.seekLineTo(PO.UP);break;
-                    case KE.LEFT : foff *= -1;
-                    case KE.RIGHT:
-                        if (e.isControlPressed() === false && e.isCmdPressed() === false) {
+                    case pkg.KeyEvent.DOWN : position.seekLineTo("down");break;
+                    case pkg.KeyEvent.UP   : position.seekLineTo("up");break;
+                    case pkg.KeyEvent.LEFT : foff *= -1;
+                    case pkg.KeyEvent.RIGHT:
+                        if (e.ctrlKey === false && e.metaKey === false) {
                             position.seek(foff);
                         }
                         break;
-                    case KE.END:
-                        if (e.isControlPressed()) {
-                            position.seekLineTo(PO.DOWN, this.getLines() - line - 1);
+                    case pkg.KeyEvent.END:
+                        if (e.ctrlKey) {
+                            position.seekLineTo("down", this.getLines() - line - 1);
                         }
-                        else position.seekLineTo(PO.END);
+                        else position.seekLineTo("end");
                         break;
-                    case KE.HOME:
-                        if (e.isControlPressed()) position.seekLineTo(PO.UP, line);
-                        else position.seekLineTo(PO.BEG);
+                    case pkg.KeyEvent.HOME:
+                        if (e.ctrlKey) position.seekLineTo("up", line);
+                        else position.seekLineTo("begin");
                         break;
-                    case KE.DELETE:
+                    case pkg.KeyEvent.DELETE:
                         if (this.hasSelection() && this.isEditable === true) {
                             this.removeSelected();
                         }
                         else {
                             if (this.isEditable === true) this.remove(position.offset, 1);
                         } break;
-                    case KE.BSPACE:
+                    case pkg.KeyEvent.BSPACE:
                         if (this.isEditable === true) {
                             if (this.hasSelection()) this.removeSelected();
                             else {
@@ -338,7 +344,7 @@ pkg.TextField = Class(pkg.Label, [
                     default: return ;
                 }
 
-                if (isShiftDown === false) {
+                if (e.shiftKey === false) {
                     this.clearSelection();
                 }
             }
@@ -347,16 +353,16 @@ pkg.TextField = Class(pkg.Label, [
         /**
          * Test if the given key pressed event has to be processed
          * @protected
-         * @param  {zebra.ui.KeyEvent} e a key event
+         * @param  {zebkit.ui.KeyEvent} e a key event
          * @return {Boolean} true if the given key pressed event doesn't
          * have be processed
          * @method isFiltered
          */
         this.isFiltered = function(e){
             var code = e.code;
-            return code == KE.CTRL ||
-                   code == KE.TAB   || code == KE.ALT  ||
-                   (e.mask & KE.M_ALT) > 0;
+            return code === pkg.KeyEvent.SHIFT || code === pkg.KeyEvent.CTRL ||
+                   code === pkg.KeyEvent.TAB   || code === pkg.KeyEvent.ALT  ||
+                   e.altKey;
         };
 
         /**
@@ -411,7 +417,7 @@ pkg.TextField = Class(pkg.Label, [
             var r = this.view;
             if (this.position.offset >= 0) {
                 var l = r.getLine(this.position.currentLine);
-                if (this.textAlign === zebra.layout.LEFT) {
+                if (this.textAlign === "left") {
                     this.curX = r.font.charsWidth(l, 0, this.position.currentCol) + this.getLeft();
                 }
                 else {
@@ -419,7 +425,7 @@ pkg.TextField = Class(pkg.Label, [
                                 r.font.charsWidth(l, 0, this.position.currentCol);
                 }
 
-                this.curY = this.position.currentLine * (r.getLineHeight() + r.getLineIndent()) +
+                this.curY = this.position.currentLine * (r.getLineHeight() + r.lineIndent) +
                             this.getTop();
             }
 
@@ -440,9 +446,9 @@ pkg.TextField = Class(pkg.Label, [
             if (this.position.offset >= 0 &&
                 this.curView != null      &&
                 this.blinkMe              &&
-                (this.hasFocus() || this.$forceToShow == true)) // TODO: $forceToShow is awkward solution sdesigned for VK
+                this.hasFocus()              )
             {
-                if (this.textAlign === zebra.layout.LEFT)
+                if (this.textAlign === "left")
                     this.curView.paint(g, this.curX, this.curY,
                                           this.curW, this.curH, this);
                 else
@@ -451,20 +457,20 @@ pkg.TextField = Class(pkg.Label, [
             }
         };
 
-        this.mouseDragStarted = function (e){
-            if (e.mask == ME.LEFT_BUTTON && this.getMaxOffset() > 0) {
+        this.pointerDragStarted = function (e){
+            if (e.isAction() && this.getMaxOffset() > 0) {
                 this.startSelection();
             }
         };
 
-        this.mouseDragEnded =function (e){
-            if (e.mask == ME.LEFT_BUTTON && this.hasSelection() === false) {
+        this.pointerDragEnded =function (e){
+            if (e.isAction() && this.hasSelection() === false) {
                 this.clearSelection();
             }
         };
 
-        this.mouseDragged = function (e){
-            if (e.mask == ME.LEFT_BUTTON){
+        this.pointerDragged = function (e){
+            if (e.isAction()){
                 var p = this.getTextRowColAt(e.x, e.y);
                 if (p != null) this.position.setRowCol(p.row, p.col);
             }
@@ -485,7 +491,7 @@ pkg.TextField = Class(pkg.Label, [
             }
 
             if (this.startOff != startOffset || endOffset != this.endOff){
-                if (startOffset == endOffset) this.clearSelection();
+                if (startOffset === endOffset) this.clearSelection();
                 else {
                     this.startOff = startOffset;
                     var p = this.position.getPointByOffset(startOffset);
@@ -520,8 +526,8 @@ pkg.TextField = Class(pkg.Label, [
                 var lineHeight = this.view.getLineHeight(),
                     top        = this.getTop();
 
-                this.scrollManager.makeVisible(this.textAlign === zebra.layout.LEFT ? this.curX
-                                                                                    : this.curX - this.curW,
+                this.scrollManager.makeVisible(this.textAlign === "left" ? this.curX
+                                                                         : this.curX - this.curW,
                                                 this.curY, this.curW, lineHeight);
 
                 if (pl >= 0) {
@@ -534,7 +540,7 @@ pkg.TextField = Class(pkg.Label, [
                     }
 
                     var minUpdatedLine = pl < position.currentLine ? pl : position.currentLine,
-                        li             = this.view.getLineIndent(),
+                        li             = this.view.lineIndent,
                         bottom         = this.getBottom(),
                         left           = this.getLeft(),
                         y1             = lineHeight * minUpdatedLine + minUpdatedLine * li +
@@ -560,11 +566,11 @@ pkg.TextField = Class(pkg.Label, [
         };
 
         this.paintOnTop = function(g) {
-            if (this.hint != null && this.getMaxOffset() == 0) {
+            if (this.hint != null && this.getMaxOffset() === 0) {
                 var ps = this.hint.getPreferredSize(),
                     yy = Math.floor((this.height - ps.height)/2),
-                    xx = (zebra.layout.LEFT === this.textAlign) ? this.getLeft() + this.curW
-                                                                : this.width - ps.width - this.getRight() - this.curW;
+                    xx = ("left" === this.textAlign) ? this.getLeft() + this.curW
+                                                     : this.width - ps.width - this.getRight() - this.curW;
 
                 this.hint.paint(g, xx, yy, this.width, this.height, this);
             }
@@ -574,12 +580,12 @@ pkg.TextField = Class(pkg.Label, [
          * Set the specified hint text to be drawn with the given font and color.
          * The hint is not-editable text that is shown in empty text field to help
          * a user to understand which input the text field expects.
-         * @param {String|zebra.ui.View|Function} hint a hint text, view or view render method
-         * @return {zebra.ui.View} a hint view
+         * @param {String|zebkit.ui.View|Function} hint a hint text, view or view render method
+         * @return {zebkit.ui.View} a hint view
          * @method setHint
          */
         this.setHint = function(hint) {
-            this.hint = zebra.isString(hint) ? new this.$clazz.HintRender(hint) : pkg.$view(hint);
+            this.hint = zebkit.isString(hint) ? new this.clazz.HintRender(hint) : pkg.$view(hint);
             this.repaint();
             return this.hint;
         };
@@ -589,8 +595,8 @@ pkg.TextField = Class(pkg.Label, [
                 var h = this.history[this.historyPos];
 
                 this.historyPos--;
-                if (h[0] == 1) this.remove(h[1], h[2]);
-                else           this.write (h[1], h[2]);
+                if (h[0] === 1) this.remove(h[1], h[2]);
+                else            this.write (h[1], h[2]);
 
                 this.undoCounter -= 2;
                 this.redoCounter++;
@@ -605,8 +611,8 @@ pkg.TextField = Class(pkg.Label, [
         this.redo_command = function() {
             if (this.redoCounter > 0) {
                 var h = this.history[(this.historyPos + 1) % this.history.length];
-                if (h[0] == 1) this.remove(h[1], h[2]);
-                else           this.write (h[1], h[2]);
+                if (h[0] === 1) this.remove(h[1], h[2]);
+                else            this.write (h[1], h[2]);
                 this.redoCounter--;
                 this.repaint();
             }
@@ -620,8 +626,9 @@ pkg.TextField = Class(pkg.Label, [
          * @method getStartSelection
          */
         this.getStartSelection = function(){
-            return this.startOff != this.endOff ? ((this.startOff < this.endOff) ? [this.startLine, this.startCol]
-                                                                                 : [this.endLine, this.endCol]) : null;
+            return this.startOff != this.endOff ? ((this.startOff < this.endOff) ? { row: this.startLine, col: this.startCol }
+                                                                                 : { row: this.endLine, col: this.endCol } )
+                                                : null;
         };
 
         /**
@@ -632,8 +639,9 @@ pkg.TextField = Class(pkg.Label, [
          * @method getEndSelection
          */
         this.getEndSelection = function(){
-            return this.startOff != this.endOff ? ((this.startOff < this.endOff) ? [this.endLine, this.endCol]
-                                                                                 : [this.startLine, this.startCol]) : null;
+            return this.startOff != this.endOff ? ((this.startOff < this.endOff) ? { row : this.endLine,   col : this.endCol   }
+                                                                                 : { row : this.startLine, col : this.startCol })
+                                                : null;
         };
 
         /**
@@ -658,31 +666,28 @@ pkg.TextField = Class(pkg.Label, [
 
         this.focusGained = function (e){
             if (this.position.offset < 0) {
-                this.position.setOffset(this.textAlign === zebra.layout.LEFT  || this.getLines() > 1 ? 0 : this.getMaxOffset());
+                this.position.setOffset(this.textAlign === "left" || this.getLines() > 1 ? 0 : this.getMaxOffset());
             }
             else {
                 if (this.hint != null) this.repaint();
                 else {
-                    if (this.isEditable === true) {
-                        this.repaintCursor();
-                    }
+                    this.repaintCursor();
                 }
             }
 
             if (this.isEditable === true && this.blinkingPeriod > 0) {
                 this.blinkMeCounter = 0;
                 this.blinkMe = true;
-                this.blinkTask = zebra.util.task(this).run(~~(this.blinkingPeriod/3),
+                this.blinkTask = zebkit.util.task(this).run(~~(this.blinkingPeriod/3),
                                                            ~~(this.blinkingPeriod/3));
             }
         };
 
-        this.focusLost = function(e){
+        this.focusLost = function(e) {
+
+            this.repaintCursor();
             if (this.isEditable === true) {
                 if (this.hint) this.repaint();
-                else {
-                    this.repaintCursor();
-                }
 
                 if (this.blinkingPeriod > 0) {
                     if (this.blinkTask != null) {
@@ -715,17 +720,19 @@ pkg.TextField = Class(pkg.Label, [
          * Clear a text selection.
          * @method clearSelection
          */
-        this.clearSelection = function (){
+        this.clearSelection = function() {
             if (this.startOff >= 0){
                 var b = this.hasSelection();
                 this.endOff = this.startOff = -1;
-                if (b) this.repaint();
+                if (b) {
+                    this.repaint();
+                }
             }
         };
 
         this.pageSize = function (){
             var height = this.height - this.getTop() - this.getBottom(),
-                indent = this.view.getLineIndent(),
+                indent = this.view.lineIndent,
                 textHeight = this.view.getLineHeight();
 
             return (((height + indent) / (textHeight + indent) + 0.5) | 0) +
@@ -751,7 +758,7 @@ pkg.TextField = Class(pkg.Label, [
 
         /**
          * Set the specified cursor position controller
-         * @param {zebra.util.Position} p a position controller
+         * @param {zebkit.util.Position} p a position controller
          * @method setPosition
          */
         this.setPosition = function (p){
@@ -770,7 +777,7 @@ pkg.TextField = Class(pkg.Label, [
         /**
          * Set the cursor view. The view defines rendering of the text field
          * cursor.
-         * @param {zebra.ui.View} v a cursor view
+         * @param {zebkit.ui.View} v a cursor view
          * @method setCursorView
          */
         this.setCursorView = function (v){
@@ -792,7 +799,7 @@ pkg.TextField = Class(pkg.Label, [
             var tr = this.view,
                 w  = (c > 0) ? (tr.font.stringWidth("W") * c)
                              : this.psWidth,
-                h  = (r > 0) ? (r * tr.getLineHeight() + (r - 1) * tr.getLineIndent())
+                h  = (r > 0) ? (r * tr.getLineHeight() + (r - 1) * tr.lineIndent)
                              : this.psHeight;
             this.setPreferredSize(w, h);
         };
@@ -813,22 +820,23 @@ pkg.TextField = Class(pkg.Label, [
             }
         };
 
-        this.mousePressed = function(e){
-            if (e.isActionMask()) {
-                if (e.clicks > 1) {
-                    this.select(0, this.getMaxOffset());
+        this.pointerDoubleClicked = function(e){
+            if (e.isAction()) {
+                this.select(0, this.getMaxOffset());
+            }
+        };
+
+        this.pointerPressed = function(e){
+            if (e.isAction()) {
+                if (e.shiftKey) {
+                    this.startSelection();
                 }
                 else {
-                    if (e.modifiers.shiftKey) {
-                        this.startSelection();
-                    }
-                    else {
-                        this.clearSelection();
-                    }
-
-                    var p = this.getTextRowColAt(e.x, e.y);
-                    if (p != null) this.position.setRowCol(p.row, p.col);
+                    this.clearSelection();
                 }
+
+                var p = this.getTextRowColAt(e.x, e.y);
+                if (p != null) this.position.setRowCol(p.row, p.col);
             }
         };
 
@@ -861,7 +869,7 @@ pkg.TextField = Class(pkg.Label, [
             try {
                 g.translate(sx, sy);
 
-                if (this.textAlign === zebra.layout.LEFT) {
+                if (this.textAlign === "left") {
                     this.view.paint(g, l, t,
                                     this.width  - l - r,
                                     this.height - t - this.getBottom(), this);
@@ -882,52 +890,51 @@ pkg.TextField = Class(pkg.Label, [
         };
     },
 
-    function () {
-        this.$this("");
-    },
-
-    function(s, maxCol){
-        var b = zebra.isNumber(maxCol);
-        this.$this(b ? new zebra.data.SingleLineTxt(s, maxCol)
-                     : (maxCol ? new zebra.data.Text(s) : s));
-        if (b && maxCol > 0) this.setPSByRowsCols(-1, maxCol);
-    },
-
-    function (render){
-        if (zebra.isString(render)) {
-            render = new pkg.TextRender(new zebra.data.SingleLineTxt(render));
-        }
-        else {
-            if (zebra.instanceOf(render, zebra.data.TextModel)) {
-                render = new pkg.TextRender(render);
-            }
-        }
-        this.startLine = this.startCol = this.endLine = this.endCol = this.curX = 0;
-        this.startOff = this.endOff = -1;
+    function (render, maxCol){
         this.history = Array(100);
         this.historyPos = -1;
         this.redoCounter = this.undoCounter = this.curY = this.curW = this.curH = 0;
-
-        this.$super(render);
         this.scrollManager = new pkg.ScrollManager(this);
+
+        if (arguments.length === 1) {
+            if (zebkit.isNumber(render)) {
+                maxCol = render;
+                this.$super(new pkg.TextRender(new zebkit.data.SingleLineTxt("", maxCol)));
+            }
+            else {
+                maxCol = -1;
+                this.$super(zebkit.isString(render) ? new pkg.TextRender(new zebkit.data.SingleLineTxt(render))
+                                                   : (zebkit.instanceOf(render, zebkit.data.TextModel) ?  new pkg.TextRender(render)
+                                                                                                     : render));
+            }
+        }
+        else {
+            // 2 arguments or zero arguments
+            if (arguments.length === 0) {
+                maxCol = -1;
+            }
+            this.$super(new pkg.TextRender(new zebkit.data.SingleLineTxt(render, maxCol)));
+        }
+
+        if (maxCol > 0) this.setPSByRowsCols(-1, maxCol);
     },
 
     function setView(v){
         if (v != this.view) {
             if (this.view != null && this.view.target != null) {
-                this.view.target.unbind(this);
+                if (this.view.target.bind != null) this.view.target.unbind(this);
             }
 
             this.$super(v);
             if (this.position == null) {
-                this.setPosition(new PO(this.view));
+                this.setPosition(new zebkit.util.Position(this.view));
             }
             else {
                 this.position.setMetric(this.view);
             }
 
             if (this.view != null && this.view.target != null) {
-                this.view.target.bind(this);
+                if (this.view.target.bind != null) this.view.target.bind(this);
             }
         }
     },
@@ -956,41 +963,38 @@ pkg.TextField = Class(pkg.Label, [
 
 /**
  * Text area UI component. The UI component to render multi-lines text.
- * @class zebra.ui.TextArea
+ * @class zebkit.ui.TextArea
  * @constructor
  * @param {String} [txt] a text
- * @extends zebra.ui.TextField
+ * @extends zebkit.ui.TextField
  */
 pkg.TextArea = Class(pkg.TextField, [
-    function() {
-        this.$this("");
-    },
-
     function(txt) {
-        this.$super(new zebra.data.Text(txt));
+        if (arguments.length === 0) txt = "";
+        this.$super(new zebkit.data.Text(txt));
     }
 ]);
 
 /**
  * Password text field.
- * @class zebra.ui.PassTextField
+ * @class zebkit.ui.PassTextField
  * @param {String} txt password text
  * @param {Integer} [maxSize] maximal size
  * @param {Boolean} [showLast] indicates if last typed character should
  * not be disguised with a star character
- * @extends zebra.ui.TextField
+ * @extends zebkit.ui.TextField
  */
 pkg.PassTextField = Class(pkg.TextField, [
-    function(txt) {
-        this.$this(txt, -1);
-    },
-
-    function(txt, size) {
-        this.$this(txt, size, false);
-    },
-
     function(txt, size, showLast) {
-        var pt = new pkg.PasswordText(new zebra.data.SingleLineTxt(txt, size));
+        if (arguments.length < 2) {
+            size = -1;
+        }
+
+        if (arguments.length < 3) {
+            showLast = false;
+        }
+
+        var pt = new pkg.PasswordText(new zebkit.data.SingleLineTxt(txt, size));
         pt.showLast = showLast;
         this.$super(pt);
         if (size > 0) {
@@ -1003,4 +1007,4 @@ pkg.PassTextField = Class(pkg.TextField, [
  * @for
  */
 
-})(zebra("ui"), zebra.Class);
+});

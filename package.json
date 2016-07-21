@@ -1,14 +1,10 @@
 {
-    "name"       : "zebra",
+    "name"       : "zebkit",
     "version"    : "1.0.0",
-    "description": "![ScreenShot](/samples/images/header.jpg)",
-    "main": "gulpfile.js",
-    "directories": {
-        "test": "tests"
-    },
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
+    "description": "zebkit",
+    "author"  : "Andrei Vishneuski",
+    "scripts" : {},
+    "main": "zebkit.js",
     "repository": {
         "type": "git",
         "url": "https://github.com/barmalei/zebra.git"
@@ -19,13 +15,16 @@
         "url": "https://github.com/barmalei/zebra/issues"
     },
     "homepage": "https://github.com/barmalei/zebra",
-    "devDependencies": {
-        "gulp": "^3.8.8",
-        "gulp-rename": "latest",
-        "gulp-uglify": "latest",
-        "gulp-concat": "latest",
+    "devDependencies"   : {
+        "gulp"          : "^3.8.8",
+        "gulp-rename"   :  "latest",
+        "gulp-uglify"   : "latest",
+        "gulp-concat"   : "latest",
+        "gulp-wrap"     : "latest",
         "gulp-webserver": "latest",
-        "gulp-zip": "latest",
-        "gulp-jshint": "latest"
+        "gulp-zip"      : "latest",
+        "gulp-jshint"   : "latest",
+        "gulp-rm"       : "latest",
+        "gulp-expect-file"   : "latest"
     }
 }

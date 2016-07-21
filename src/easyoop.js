@@ -1,14 +1,13 @@
 /**
  * This is the core module that provides powerful easy OOP concept, packaging and number of utility methods.
- * The module has no any dependency from others zebra modules and can be used independently.
- * @module zebra
+ * The module has no any dependency from others zebkit modules and can be used independently.
+ * @module zebkit
  */
 (function() {
 
 //  Faster match operation analogues:
 //  Math.floor(f)  =>  ~~(a)
 //  Math.round(f)  =>  (f + 0.5) | 0
-//
 function isString(o)  {
     return typeof o !== "undefined" && o !== null &&
           (typeof o === "string" || o.constructor === String);
@@ -24,48 +23,10 @@ function isBoolean(o) {
           (typeof o === "boolean" || o.constructor === Boolean);
 }
 
-if (!String.prototype.trim) {
-    String.prototype.trim = function() {
-        return this.replace(/^\s+|\s+$/g,'');
-    };
-}
-
-if (!Array.prototype.indexOf) {
-    Array.prototype.indexOf = function(searchElement) {
-        if (this == null) {
-            throw new TypeError();
-        }
-
-        var t = Object(this), len = t.length >>> 0;
-        if (len === 0) return -1;
-
-        var n = 0;
-        if (arguments.length > 0) {
-            n = Number(arguments[1]);
-            if (n != n) n = 0;
-            else if (n !== 0 && n != Infinity && n != -Infinity) {
-                n = (n > 0 || -1) * ~~Math.abs(n);
-            }
-        }
-        if (n >= len) return -1;
-        var k = n >= 0 ? n : Math.max(len - Math.abs(n), 0);
-        for (; k < len; k++) {
-            if (k in t && t[k] === searchElement) return k;
-        }
-        return -1;
-    };
-}
-
-if (!Array.isArray) {
-    Array.isArray = function(a) {
-        return Object.prototype.toString.call(a) == '[object Array]';
-    };
-}
-
 /**
  *  Create a new or return existent name space by the given name. The names space
  *  is structure to host various packages, classes, interfaces and so on. Usually
- *  developers should use "zebra" name space to access standard zebra classes,
+ *  developers should use "zebkit" name space to access standard zebkit classes,
  *  interfaces, methods and packages and also to put own packages, classes etc
  *  there. But in some cases it can be convenient to keep own stuff in a
  *  dedicated project specific name space.
@@ -75,133 +36,151 @@ if (!Array.isArray) {
  *
  *    * Get the bound to the given name space variables:
  * @example
- *          // get all variables of "zebra" namespace
- *          var variables = zebra();
- *          variables["myVariable"] = "myValue" // set variables in "zebra" name space
+ *          // get all variables of "zebkit" namespace
+ *          var variables = zebkit();
+ *          variables["myVariable"] = "myValue" // set variables in "zebkit" name space
  *
  *    * Get list of packages that are hosted under the given name space:
  * @example
- *         // get all packages that "zebra" name space contain
- *         zebra(function(packageName, package) {
+ *         // get all packages that "zebkit" name space contain
+ *         zebkit(function(packageName, package) {
  *               ...
  *         });
  *
  *    * Create or access a package by the given package name (can be hierarchical):
  * @example
- *         var pkg = zebra("test.io") // create or get "test.io" package
+ *         var pkg = zebkit("test.io") // create or get "test.io" package
  *
  *  @method namespace
- *  @api zebra.namespace()
+ *  @api zebkit.namespace()
  */
-var $$$ = 0, namespaces = {}, namespace = function(nsname, dontCreate) {
-    if (isString(nsname) === false) {
-        throw new Error("Invalid name space name : '" + nsname + "'");
+
+
+// package class
+function Package(name) {
+    this.$url  = null;
+    this.$name = name;
+    if (typeof document !== "undefined") {
+        var s  = document.getElementsByTagName('script'),
+            ss = s[s.length - 1].getAttribute('src'),
+            i  = ss == null ? -1 : ss.lastIndexOf("/");
+
+        this.$url = (i > 0) ? new zebkit.URL(ss.substring(0, i + 1))
+                            : new zebkit.URL(document.location.toString()).getParentURL() ;
     }
+}
 
-    if (namespaces.hasOwnProperty(nsname)) {
-        return namespaces[nsname];
-    }
-
-    if (dontCreate === true) {
-        throw new Error("Name space '" + nsname + "' doesn't exist");
-    }
-
-    function Package() {
-        this.$url = null;
-        if (typeof document !== "undefined") {
-            var s  = document.getElementsByTagName('script'),
-                ss = s[s.length - 1].getAttribute('src'),
-                i  = ss == null ? -1 : ss.lastIndexOf("/");
-
-            this.$url = (i > 0) ? new zebra.URL(ss.substring(0, i + 1))
-                                : new zebra.URL(document.location.toString()).getParentURL() ;
-        }
-    }
-
-    if (namespaces.hasOwnProperty(nsname)) {
-        throw new Error("Name space '" + nsname + "' already exists");
-    }
-
-    var f = function(name) {
-        if (arguments.length === 0) return f.$env;
-
-        if (typeof name === 'function') {
-            for(var k in f) {
-                if (f[k] instanceof Package) name(k, f[k]);
-            }
-            return null;
+var $$$        = 11,
+    namespaces = {},
+    namespace  = function(nsname, dontCreate) {
+        if (isString(nsname) === false) {
+            throw new Error("Invalid name space name : '" + nsname + "'");
         }
 
-        var b = Array.isArray(name);
-        if (isString(name) === false && b === false) {
-            for(var k in name) {
-                if (name.hasOwnProperty(k)) f.$env[k] = name[k];
-            }
-            return;
+        if (namespaces.hasOwnProperty(nsname)) {
+            return namespaces[nsname];
         }
 
-        if (b) {
-           for(var i = 0; i < name.length; i++) f(name[i]);
-           return null;
+        if (dontCreate === true) {
+            throw new Error("Name space '" + nsname + "' doesn't exist");
         }
 
-        if (f[name] instanceof Package) {
-            return f[name];
+        if (namespaces.hasOwnProperty(nsname)) {
+            throw new Error("Name space '" + nsname + "' already exists");
         }
 
-        var names = name.split('.'), target = f;
-        for(var i = 0, k = names[0]; i < names.length; i++, k = k + '.' + names[i]) {
-            var n = names[i], p = target[n];
-            if (typeof p === "undefined") {
-                p = new Package();
-                target[n] = p;
-                f[k] = p;
-            }
-            else {
-                if ((p instanceof Package) === false) {
-                    throw new Error("Requested package '" + name +  "' conflicts with variable '" + n + "'");
+        var f = function(name) {
+            if (arguments.length === 0) return f.$env;
+
+            if (typeof name === 'function') {
+                for(var k in f) {
+                    if (f[k] instanceof Package) name(k, f[k]);
                 }
+                return null;
             }
 
-            target = p;
-        }
-        return target;
-    };
+            var b = Array.isArray(name);
+            if (isString(name) === false && b === false) {
+                for(var k in name) {
+                    if (name.hasOwnProperty(k)) f.$env[k] = name[k];
+                }
+                return;
+            }
 
-    f.Import = function() {
-        var ns = "=" + nsname + ".", code = [],
-            packages = arguments.length === 0 ? null
-                                              : Array.prototype.slice.call(arguments, 0);
-        f(function(n, p) {
-            if (packages == null || packages.indexOf(n) >= 0) {
-                for (var k in p) {
-                    if (k[0] != '$' && k[0] != '_' && (p[k] instanceof Package) === false && p.hasOwnProperty(k)) {
-                        code.push(k + ns + n + "." + k);
+            if (b) {
+               for(var i = 0; i < name.length; i++) f(name[i]);
+               return null;
+            }
+
+            if (f[name] instanceof Package) {
+                return f[name];
+            }
+
+            var names = name.split('.'), target = f;
+            for(var i = 0, k = names[0]; i < names.length; i++, k = k + '.' + names[i]) {
+                var n = names[i], p = target[n];
+                if (typeof p === "undefined") {
+                    p = new Package(name);
+                    target[n] = p;
+                    f[k] = p;
+                }
+                else {
+                    if ((p instanceof Package) === false) {
+                        throw new Error("Requested package '" + name +  "' conflicts with variable '" + n + "'");
                     }
                 }
-                if (packages != null) packages.splice(packages.indexOf(n), 1);
+
+                target = p;
             }
-        });
+            return target;
+        };
 
-        if (packages != null && packages.length !== 0) {
-            throw new Error("Unknown package(s): " + packages.join(","));
-        }
+        f.Import = function() {
+            var ns   = "=" + nsname + ".",
+                code = [],
+                packages = arguments.length === 0 ? null
+                                                  : Array.prototype.slice.call(arguments, 0);
+            f(function(n, p) {
+                if (packages == null || packages.indexOf(n) >= 0) {
+                    for (var k in p) {
+                        if (k[0] !== '$' && k[0] !== '_' && (p[k] instanceof Package) === false && p.hasOwnProperty(k)) {
+                            code.push(k + ns + n + "." + k);
+                        }
+                    }
+                    if (packages != null) packages.splice(packages.indexOf(n), 1);
+                }
+            });
 
-        return code.length > 0 ?  "var " + code.join(",") + ";" : null;
+            if (packages != null && packages.length !== 0) {
+                throw new Error("Unknown package(s): " + packages.join(","));
+            }
+
+            return code.length > 0 ?  "var " + code.join(",") + ";" : null;
+        };
+
+        f.$env = {};
+        namespaces[nsname] = f;
+        return f;
     };
 
-    f.$env = {};
-    namespaces[nsname] = f;
-    return f;
-};
+var pkg = zebra = zebkit = namespace('zebkit'),
+    CNAME  = pkg.CNAME = '$',
+    CDNAME = '';
 
-var pkg = zebkit = zebra = namespace('zebra'),
-    CNAME = pkg.CNAME = '$', CDNAME = '',
-    FN = pkg.$FN = (typeof namespace.name === "undefined" || namespace.name == "") ? (function(f) {
-                                                                var mt = f.toString().match(/^function\s+([^\s(]+)/);
-                                                                return (mt == null) ? CNAME : mt[1];
-                                                             })
-                                                           : (function(f) { return f.name; });
+pkg.$FN = (isString.name !== "isString") ? (function(f) {  // IE stuff
+                                                if (f.$methodName == null) { // test if name has been earlier detected
+                                                    var mt = f.toString().match(/^function\s+([^\s(]+)/);
+                                                    f.$methodName = (mt == null) ? CDNAME : mt[1];
+                                                }
+                                                return f.$methodName;
+                                            })
+                                         : (function(f) { return f.name; });
+
+pkg.isInBrowser = typeof navigator !== "undefined";
+pkg.isIE        = pkg.isInBrowser && (Object.hasOwnProperty.call(window, "ActiveXObject") || !!window.ActiveXObject);
+pkg.isFF        = pkg.isInBrowser && window.mozInnerScreenX != null;
+
+pkg.isMacOS = pkg.isInBrowser && navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
 pkg.namespaces = namespaces;
 pkg.namespace  = namespace;
@@ -209,51 +188,196 @@ pkg.$global    = (typeof window !== "undefined" && window != null) ? window : th
 pkg.isString   = isString;
 pkg.isNumber   = isNumber;
 pkg.isBoolean  = isBoolean;
-pkg.version    = "10.2014";
-pkg.$caller    = null; // current method which is called
+pkg.$caller    = null; // currently called method reference
 
-function mnf(name, params) {
-    var cln = this.$clazz && this.$clazz.$name ? this.$clazz.$name + "." : "";
-    throw new ReferenceError("Method '" + cln + (name === CNAME ? "constructor"
-                                                                : name) + "(" + params + ")" + "' not found");
-}
+pkg.$MapImplementation = function() {
+    var Map = function() {
+        this.keys   = [];
+        this.values = [];
+        this.size   = 0 ;
+    };
 
-function $toString() { return this.$hash$; }
+    Map.prototype = {
+        set : function(key, value) {
+            var i = this.keys.indexOf(key);
+            if (i < 0) {
+                this.keys.push(key);
+                this.values.push(value);
+                this.size++;
+            }
+            else {
+               this.values[i] = value;
+            }
+            return this;
+         },
 
-// return function that is meta class
-//  pt - parent template function (can be null)
-//  tf - template function
-//  p  - parent interfaces
-function make_template(pt, tf, p) {
-    tf.$hash$ = "$ZBr$" + ($$$++);
-    tf.toString = $toString;
-
-    if (pt != null) {
-        tf.prototype.$clazz = tf;
-    }
-
-    tf.$clazz = pt;
-    tf.prototype.toString = $toString;
-    tf.prototype.constructor = tf;
-
-    if (p != null && p.length > 0) {
-        tf.$parents = {};
-        for(var i=0; i < p.length; i++) {
-            var l = p[i];
-            if (l == null || typeof l !== "function") {
-                throw new ReferenceError("Invalid parent class or interface:" + i);
+        delete: function(key) {
+            var i = this.keys.indexOf(key);
+            if (i < 0) {
+               return false;
             }
 
-            tf.$parents[l] = true;
-            if (l.$parents) {
-                var pp = l.$parents;
-                for(var k in pp) {
-                    if (pp.hasOwnProperty(k)) tf.$parents[k] = true;
+            this.keys.splice(i, 1);
+            this.values.splice(i, 1);
+            this.size--;
+            return true;
+        },
+
+        get : function(key) {
+            var i = this.keys.indexOf(key);
+            return i < 0 ? undefined : this.values[i];
+        },
+
+        clear : function() {
+            this.keys = [];
+            this.keys.length = 0;
+            this.values = [];
+            this.values.length = 0;
+            this.size = 0;
+        },
+
+        has : function(key) {
+            return this.keys.indexOf(key) >= 0;
+        },
+
+        forEach: function(callback, context) {
+            var $this = context == null ? this : context;
+            for(var i = 0 ; i < this.size; i++) {
+                callback.call($this, this.values[i], this.keys[i], this);
+            }
+        }
+    };
+
+    return Map;
+};
+
+// Map is class
+if (typeof pkg.$global.Map === "undefined") {
+    pkg.$global.Map = pkg.$MapImplementation();
+}
+
+pkg.clone = function (obj, map) {
+    // clone atomic type
+    if (obj == null || zebkit.isString(obj) || zebkit.isBoolean(obj) || zebkit.isNumber(obj)) {
+        return obj;
+    }
+
+    if (obj.$notClonable === true) {
+        return obj;
+    }
+
+    map = map || new Map();
+    var t = map.get(obj);
+    if (typeof t !== "undefined") {
+        return t;
+    }
+
+    // clone with provided custom "clone" method
+    if (typeof obj.$clone !== "undefined") {
+        return obj.$clone(map);
+    }
+
+    // clone array
+    if (Array.isArray(obj)) {
+        var nobj = [];
+
+        map.set(obj, nobj);
+        map[obj] = nobj;
+
+        for(var i = 0; i < obj.length; i++) {
+            nobj[i] = pkg.clone(obj[i], map);
+        }
+        return nobj;
+    }
+
+    // function cannot be cloned
+    if (typeof obj === 'function' || obj.constructor !==  Object) {
+        return obj;
+    }
+
+    var nobj = {};
+    map.set(obj, nobj);
+
+    // clone object fields
+    for(var k in obj) {
+        if (obj.hasOwnProperty(k) === true) {
+            nobj[k] = pkg.clone(obj[k], map);
+        }
+    }
+
+    return nobj;
+};
+
+/**
+ * Instantiate a new class instance by the given class name with the specified constructor
+ * arguments.
+ * @param  {Function} clazz a class
+ * @param  {Array} [args] an arguments list
+ * @return {Object}  a new instance of the given class initialized with the specified arguments
+ * @api  zebkit.util.newInstance()
+ * @method newInstance
+ */
+pkg.newInstance = function(clazz, args) {
+    if (args && args.length > 0) {
+        function f() {}
+        f.prototype = clazz.prototype;
+        var o = new f();
+        clazz.apply(o, args);
+        return o;
+    }
+    return new clazz();
+};
+
+function $toString() {
+    return this.$hash$;
+}
+
+// return function that is meta class
+//  parentTemplate      - parent template function (can be null)
+//  templateConstructor - template function
+//  inheritanceList     - parent class and interfaces
+function make_template(parentTemplate, templateConstructor, inheritanceList) {
+    templateConstructor.$hash$ = "$zEk$" + ($$$++);
+    templateConstructor.toString = $toString;
+
+    if (parentTemplate != null) {
+        templateConstructor.prototype.clazz = templateConstructor;
+    }
+
+    templateConstructor.clazz = parentTemplate;
+    templateConstructor.prototype.toString = $toString;
+    templateConstructor.prototype.constructor = templateConstructor;
+
+    // setup parent entities
+    if (inheritanceList != null && inheritanceList.length > 0) {
+        templateConstructor.$parents = {};
+        for(var i = 0; i < inheritanceList.length; i++) {
+            var inherited = inheritanceList[i];
+            if (inherited == null || typeof inherited !== "function" || typeof inherited.$hash$ === "undefined") {
+                throw new ReferenceError("Invalid parent class or interface:" + inherited);
+            }
+
+            if (templateConstructor.$parents[inherited.$hash$] === true) {
+                throw Error("Duplicate inherited class or interface: " + inherited);
+            }
+
+            templateConstructor.$parents[inherited.$hash$] = true;
+
+            // if parent has own parents copy the parents references
+            if (inherited.$parents != null) {
+                for(var k in inherited.$parents) {
+                    if (inherited.$parents.hasOwnProperty(k)) {
+                        if (templateConstructor.$parents[k] === true) {
+                            throw Error("Duplicate inherited class or interface: " + k);
+                        }
+
+                        templateConstructor.$parents[k] = true;
+                    }
                 }
             }
         }
     }
-    return tf;
+    return templateConstructor;
 }
 
 pkg.getPropertySetter = function(obj, name) {
@@ -275,9 +399,9 @@ pkg.getPropertySetter = function(obj, name) {
 pkg.properties = function(target, p) {
     for(var k in p) {
         // skip private properties( properties that start from "$")
-        if (k[0] != '$' && p.hasOwnProperty(k) && typeof p[k] !== 'function') {
+        if (k[0] !== '$' && p.hasOwnProperty(k) && typeof p[k] !== 'function') {
             var v = p[k],
-                m = zebra.getPropertySetter(target, k);
+                m = zebkit.getPropertySetter(target, k);
 
             // value factory detected
             if (v != null && v.$new != null) v = v.$new();
@@ -303,9 +427,9 @@ pkg.Singleton = function(clazz) {
 
     var clz = Class(clazz, [
         function() {
-            // make sure this constructor is mot
+            // make sure this constructor is not
             // called from a successor class
-            if (this.$clazz === clz) {
+            if (this.clazz === clz) {
                 if (clz.$instance != null) {
                     return clz.$instance;
                 }
@@ -328,110 +452,113 @@ pkg.Singleton = function(clazz) {
  * It is not supposed an interface directly rules which method the class has to implement.
 
         // declare "I" interface
-        var I = zebra.Interface();
+        var I = zebkit.Interface();
 
         // declare "A" class that implements "I" interface
-        var A = zebra.Class(I, [ function m() {} ]);
+        var A = zebkit.Class(I, [ function m() {} ]);
 
         // instantiate "A" class
         var a = new A();
-        zebra.instanceOf(a, I);  // true
-        zebra.instanceOf(a, A);  // true
+        zebkit.instanceOf(a, I);  // true
+        zebkit.instanceOf(a, A);  // true
 
 
  * @return {Function} an interface
  * @method Interface
- * @api  zebra.Interface()
+ * @api  zebkit.Interface()
  */
 pkg.Interface = make_template(null, function() {
     var $Interface = make_template(pkg.Interface, function() {
-        if (arguments.length > 0) {
-            return new (pkg.Class($Interface, arguments[0]))();
+        return new (pkg.Class($Interface, arguments[0]))();
+        //throw new Error("Interface cannot be instantiated");
+    }, null);
+
+    if (arguments.length > 1) {
+        throw Error("Only one argument is expected");
+    }
+
+    $Interface.api = [];
+
+    if (arguments.length > 0) {
+        var methods = [];
+
+        // TODO: temporary solution for abstract methods declaration
+        if (arguments[0] != null && arguments[0].abstract != null && Array.isArray(arguments[0].abstract)) {
+            methods = arguments[0].abstract;
+            for(var i = 0; i < methods.length; i++) {
+                var mn = pkg.$FN(methods[i]);
+                eval("var method = function " + mn + "() { throw new Error('Method " + mn + "() not implemented'); };");
+                methods[i] = method;
+            }
+
+            if (Array.isArray(arguments[0].methods)) {
+                methods.concat.apply(this, arguments[0].methods);
+            }
+        } else {
+            if (Array.isArray(arguments[0]) === false) {
+                throw new Error("Array of methods is expected");
+            }
+            methods = arguments[0];
         }
-    }, arguments);
+
+        if (methods.length > 0) {
+            for(var i = 0; i < methods.length; i++) {
+                var method = methods[i];
+                if (typeof method !== "function") {
+                    throw new Error("Method is expected");
+                }
+
+                if (method.clazz != null) {
+                    throw new Error("Interface cannot be inherited");
+                }
+
+                $Interface.api[i] = method;
+            }
+        }
+    }
     return $Interface;
 });
 
 // single method proxy
-function sProxyMethod(name, f) {
+function ProxyMethod(name, f, clazz) {
+    if (typeof f.methodBody !== "undefined") {
+        throw new Error("Proxy method '" + name + "' cannot be wrapped");
+    }
+
     var a = function() {
         var cm = pkg.$caller;
-        pkg.$caller = a.f;
-        // don't use finally section it slower than try-catch
+        pkg.$caller = a;
+        // don't use finally section it is slower than try-catch
         try {
-            var r = a.f.apply(this, arguments);
+            var r = f.apply(this, arguments);
             pkg.$caller = cm;
             return r;
-        }
-        catch(e) {
+        } catch(e) {
             pkg.$caller = cm;
             console.log(name + "(" + arguments.length + ") " + (e.stack ? e.stack : e));
             throw e;
         }
     };
 
-    a.f = f;
+    a.methodBody = f;
     a.methodName = name;
-
-    a.$clone$ = function() {
-        return sProxyMethod(a.methodName, a.f);
-    };
-
-    return a;
-}
-
-// multiple methods proxy
-function nProxyMethod(name) {
-    var a = function() {
-        var nm = a.methods[arguments.length];
-        if (nm != null) {
-            var cm = pkg.$caller;
-            pkg.$caller = nm;
-            // don't use finally section it slower than try-catch
-            try {
-                var r = nm.apply(this, arguments);
-                pkg.$caller = cm;
-                return r;
-            }
-            catch(e) {
-                pkg.$caller = cm;
-                console.log("" + (e.stack ? e.stack : e));
-                throw e;
-            }
-        }
-        mnf.call(this, a.methodName, arguments.length);
-    };
-
-    a.methods = {};
-    a.methodName = name;
-
-    a.$clone$ = function() {
-        // multiple methods, so overloading is possible
-        var m = nProxyMethod(a.methodName);
-        for(var k in a.methods) {
-            if (a.methods.hasOwnProperty(k)) {
-                m.methods[k] = a.methods[k];
-            }
-        }
-        return m;
-    };
-
+    a.boundTo    = clazz;
     return a;
 }
 
 /**
- * Class declaration method. Zebra easy OOP concept supports:
+ * Class declaration method. Easy OOP concept supports:
  *
  *
- *  __Single class inheritance.__ Any class can extend an another zebra class
+ *  __Single class inheritance.__ Any class can extend an another zebkit class
 
         // declare class "A" that with one method "a"
-        var A = zebra.Class([
+        var A = zebkit.Class([
             function a() { ... }
         ]);
 
         // declare class "B" that inherits class "A"
-        var B = zebra.Class(A, []);
+        var B = zebkit.Class(A, []);
 
         // instantiate class "B" and call method "a"
         var b = new B();
@@ -440,42 +567,20 @@ function nProxyMethod(name) {
     __Class method overriding.__ Override a parent class method implementation
 
         // declare class "A" that with one method "a"
-        var A = zebra.Class([
+        var A = zebkit.Class([
             function a() { ... }
         ]);
 
         // declare class "B" that inherits class "A"
         // and overrides method a with an own implementation
-        var B = zebra.Class(A, [
+        var B = zebkit.Class(A, [
             function a() { ... }
         ]);
-
-    __Class method overloading.__ You can declare methods with the same names but
-    different parameter list. The methods are considered as different methods
-
-        // declare class "A" that with one method "a"
-        var A = zebra.Class([
-            function a() { ... }
-        ]);
-
-        // declare class "B" that inherits class "A"
-        // and overloads method "a" with another number of
-        // parameters
-        var B = zebra.Class(A, [
-            function a(param1) { ... }
-        ]);
-
-        // instantiate class B and call two different
-        // methods "a()" and "a(param1)"
-        var b = new B();
-        b.a();      // call method defined in "A" class
-        b.a(100);   // call overloaded method defined in "B" class
-
 
     __Constructors.__ Constructor is a method with empty name
 
         // declare class "A" that with one constructor
-        var A = zebra.Class([
+        var A = zebkit.Class([
             function () { this.variable = 100; }
         ]);
 
@@ -486,7 +591,7 @@ function nProxyMethod(name) {
     __Static methods and variables declaration.__ Static fields and methods can be defined
     by declaring special "$clazz" method whose context is set to declared class
 
-        var A = zebra.Class([
+        var A = zebkit.Class([
             // special method where static stuff has to be declared
             function $clazz() {
                 // declare static field
@@ -503,12 +608,12 @@ function nProxyMethod(name) {
     __Access to super class context.__ You can call method declared in a parent class
 
         // declare "A" class with one class method "a(p1,p2)"
-        var A = zebra.Class([
+        var A = zebkit.Class([
             function a(p1, p2) { ... }
         ]);
 
         // declare "B" class that inherits "A" class and overrides "a(p1,p2)" method
-        var B = zebra.Class(A, [
+        var B = zebkit.Class(A, [
             function a(p1, p2) {
                 // call "a(p1,p2)" method implemented with "A" class
                 this.$super(p1,p2);
@@ -516,14 +621,14 @@ function nProxyMethod(name) {
         ]);
 
  *
- *  One of the powerful feature of zebra easy OOP concept is possibility to instantiate
+ *  One of the powerful feature of zebkit easy OOP concept is possibility to instantiate
  *  anonymous classes and interfaces. Anonymous class is an instance of an existing
  *  class that can override the original class methods with own implementations, implements
  *  own list of interfaces. In other words the class instance customizes class definition
  *  for the particular instance of the class;
 
             // declare "A" class
-            var A = zebra.Class([
+            var A = zebkit.Class([
                 function a() { return 1; }
             ]);
 
@@ -533,14 +638,131 @@ function nProxyMethod(name) {
             ]);
             a.a() // return 2
 
- * @param {zebra.Class} [inheritedClass] an optional parent class to be inherited
- * @param {zebra.Interface} [inheritedInterfaces*] an optional list of interfaces for
+ * @param {zebkit.Class} [inheritedClass] an optional parent class to be inherited
+ * @param {zebkit.Interface} [inheritedInterfaces*] an optional list of interfaces for
  * the declared class to be extended
  * @param {Array} methods list of declared class methods. Can be empty array.
  * @return {Function} a class definition
- * @api zebra.Class()
+ * @api zebkit.Class()
  * @method Class
  */
+
+function copyProtoFields(targetClazz, parentClazz, cb) {
+    for (var k in parentClazz.prototype) {
+        if (parentClazz.prototype.hasOwnProperty(k) === true) {
+            var f = parentClazz.prototype[k];
+            targetClazz.prototype[k] = (f != null && f.methodBody != null) ? ProxyMethod(f.methodName, f.methodBody, f.boundTo)
+                                                                           : f;
+            if (cb != null) {
+                cb(targetClazz, parentClazz, targetClazz.prototype[k], f);
+            }
+        }
+    }
+}
+
+/**
+ * Extend existent class with the given methods and interfaces
+ * Be  careful to use the method, pay attention the following facts:
+
+- only the given class and the classes that inherit the class __after the extend method calling__ get the updates
+
+ *
+ * For example:
+
+    var A = zebkit.Class([ // declare class A that defines one "a" method
+        function a() {
+            console.log("A:a()");
+        }
+    ]);
+
+    var a = new A();
+    a.a();  // show "A:a()" message
+
+    A.extend([
+        function b() {
+            console.log("EA:b()");
+        },
+
+        function a() {   // redefine "a" method
+            console.log("EA:a()");
+        }
+    ]);
+
+    // can call b() method we just added to the instance class
+    a.b(); // show "EA:b()" message
+    a.a(); // show "EA:a()" message
+
+ * @param {Array} methods array of the methods the class have to be
+ * extended with
+ * @method mixing
+ */
+function mixing(clazz, methods, overwritable) {
+    if (overwritable == null) {
+        overwritable = false;
+    }
+
+    if (Array.isArray(methods) === false) {
+        throw new Error("Methods array is expected (" + methods + ")");
+    }
+
+    var names = {};
+    for(var i = 0; i < methods.length; i++) {
+        var method     = methods[i],
+            methodName = pkg.$FN(method);
+
+        // detect if the passed method is proxy method
+        if (method.methodBody != null) {
+            throw new Error("Proxy method '" + methodName + "' cannot be mixed in a class");
+        }
+
+        // map user defined constructor to internal constructor name
+        if (methodName === CDNAME) {
+            methodName = CNAME;
+        }
+        else {
+            if (methodName[0] === "$") {
+                // populate prototype fields if a special method has been defined
+                if (methodName === "$prototype") {
+                    method.call(clazz.prototype, clazz);
+                    if (clazz.prototype[CDNAME]) {
+                        clazz.prototype[CNAME] = clazz.prototype[CDNAME];
+                        delete clazz.prototype[CDNAME];
+                    }
+                    continue;
+                }
+
+                // populate class level fields if a special method has been defined
+                if (methodName === "$clazz") {
+                    method.call(clazz);
+                    continue;
+                }
+            }
+        }
+
+        if (names[methodName] === true) {
+            throw new Error("Duplicate declaration of '" + methodName+ "(...)' method");
+        }
+
+        var existentMethod = clazz.prototype[methodName];
+        if (typeof existentMethod !== 'undefined') {
+            if (typeof existentMethod !== 'function') {
+                throw new Error("'" + methodName + "(...)' method clash with a field");
+            }
+
+            // check if the method has been already declared for the given class
+            if (overwritable === false && existentMethod.boundTo === clazz) {
+                throw new Error("Duplicate class '" + methodName +"(...)' method overwriting is not allowed");
+            }
+        }
+
+        // Create and set proxy method that is bound to the given class
+        clazz.prototype[methodName] = ProxyMethod(methodName, method, clazz);
+
+        // save method we have already added to check double declaration error
+        names[methodName] = true;
+    }
+}
+
 pkg.Class = make_template(null, function() {
     if (arguments.length === 0) {
         throw new Error("No class definition was found");
@@ -550,26 +772,34 @@ pkg.Class = make_template(null, function() {
         throw new Error("Invalid class definition");
     }
 
-    if (arguments.length > 1 && typeof arguments[0] !== "function") {
+    if (arguments.length > 1 && typeof arguments[0] !== "function")  {
         throw new ReferenceError("Invalid parent class '" + arguments[0] + "'");
     }
 
-    var df = arguments[arguments.length - 1],
-        $parent = null,
-        args = []; // using slice can be slower that trivial copying array
-                  // Array.prototype.slice.call(arguments, 0, arguments.length-1);
+    var classMethods = arguments[arguments.length - 1],
+        parentClass  = null,
+        toInherit    = []; // using slice can be slower that trivial copying array
+                           // Array.prototype.slice.call(arguments, 0, arguments.length-1);
+
+    // detect parent class in inheritance list as the first argument that has "clazz" set to Class
+    if (arguments.length > 0 && (arguments[0] == null || arguments[0].clazz === pkg.Class)) {
+        parentClass = arguments[0];
+    }
 
     // use instead of slice for performance reason
-    for(var i=0; i < arguments.length-1; i++) {
-        args[i] = arguments[i];
+    for(var i = 0; i < arguments.length - 1; i++) {
+        toInherit[i] = arguments[i];
+
+        // let's make sure we inherit interface
+        if (parentClass == null || i > 0) {
+            if (toInherit[i] == null || toInherit[i].clazz !== pkg.Interface) {
+                throw new ReferenceError("Invalid inherited interface [" + i + "] :" + toInherit[i]);
+            }
+        }
     }
 
-    if (args.length > 0 && (args[0] == null || args[0].$clazz == pkg.Class)) {
-        $parent = args[0];
-    }
-
-    var $template = make_template(pkg.Class, function() {
-        this.$hash$ = "$zObj_" + ($$$++);
+    var classTemplate = make_template(pkg.Class, function() {
+        this.$hash$ = "$ZkIo" + ($$$++);
 
         if (arguments.length > 0) {
             var a = arguments[arguments.length - 1];
@@ -579,11 +809,11 @@ pkg.Class = make_template(null, function() {
                 a = a[0];
 
                 // prepare arguments list to declare an anonymous class
-                var args = [ $template ],      // first of all the class has to inherit the original class
-                    k = arguments.length - 2;
+                var args = [ classTemplate ],      // first of all the class has to inherit the original class
+                    k    = arguments.length - 2;
 
                 // collect interfaces the anonymous class has to implement
-                for(; k >= 0 && pkg.instanceOf(arguments[k], pkg.Interface); k--) {
+                for(; k >= 0 && arguments[k].clazz === pkg.Interface; k--) {
                     args.push(arguments[k]);
                 }
 
@@ -596,7 +826,7 @@ pkg.Class = make_template(null, function() {
                     // call constructor properly since we have arguments as an array
                     f  = function() {};
 
-                cl.$name = $template.$name; // the same class name for anonymous
+                cl.$name = classTemplate.$name; // the same class name for anonymous
                 f.prototype = cl.prototype; // the same prototypes
 
                 var o = new f();
@@ -604,8 +834,8 @@ pkg.Class = make_template(null, function() {
                 // call constructor
                 // use array copy instead of cloning with slice for performance reason
                 // (Array.prototype.slice.call(arguments, 0, k + 1))
-                var args = [];
-                for(var i=0; i < k + 1; i++) args[i] = arguments[i];
+                args = [];
+                for(var i = 0; i < k + 1; i++) args[i] = arguments[i];
                 cl.apply(o, args);
 
                 // set constructor field for consistency
@@ -617,72 +847,63 @@ pkg.Class = make_template(null, function() {
         if (this[CNAME] != null) {
             return this[CNAME].apply(this, arguments);
         }
-    }, args);
+    }, toInherit);
 
     // prepare fields that caches the class properties
-    $template.$propertyInfo = {};
+    classTemplate.$propertyInfo = {};
+
 
     // copy parents prototype methods and fields into
     // new class template
-    $template.$parent = $parent;
-    if ($parent != null) {
-        for (var k in $parent.prototype) {
-            if ($parent.prototype.hasOwnProperty(k)) {
-                var f = $parent.prototype[k];
+    classTemplate.$parent = parentClass;
+    if (parentClass != null) {
+        copyProtoFields(classTemplate, parentClass);
+    }
 
-                // constructor should not be copied
-                if (k != CNAME) {
-                    $template.prototype[k] = (f != null && f.$clone$ != null) ? f.$clone$() : f;
-                }
-            }
+    if (toInherit.length > 0) {
+        for(var i = toInherit[0].clazz === pkg.Interface ? 0 : 1; i < toInherit.length; i++) {
+
+            mixing(classTemplate, toInherit[i].api);
         }
     }
 
     // extend method cannot be overridden
-    $template.prototype.extend = function() {
-        var c = this.$clazz,
+    classTemplate.prototype.extend = function() {
+        var c = this.clazz,
             l = arguments.length,
-            f = arguments[l-1];
+            f = arguments[l - 1];
 
         // replace the instance class with a new intermediate class
         // that inherits the replaced class. it is done to support
         // $super method calls.
         if (this.$extended !== true) {
             c = Class(c,[]);
-            this.$extended = true;               // mark the instance as extended to avoid double extending.
-            c.$name = this.$clazz.$name;
-            this.$clazz = c;
+            this.$extended = true;         // mark the instance as extended to avoid double extending.
+            c.$name = this.clazz.$name;
+            this.clazz = c;
         }
 
         if (Array.isArray(f)) {
-            for(var i=0; i < f.length; i++) {
-                var n = FN(f[i]);
-
-                // map user defined constructor to internal constructor name
-                if (n == CDNAME) n = CNAME;
-
-                if (n === CNAME) {
-                    f[i].call(this);   // call constructor as an initializer
-                    continue;
+            var init = null;
+            for(var i = 0; i < f.length; i++) {
+                var n = pkg.$FN(f[i]);
+                if (n === CDNAME) {
+                    init = f[i];  // postpone calling initializer before all methods will be defined
                 }
                 else {
-                    // clone method and put it in class instance
-                    // if the method is not directly defined in
-                    // the class instance
-                    var pv = this[n];
-                    if (pv != null && this.hasOwnProperty(n) === false)  {
-                        this[n] = (pv.$clone$ != null ? pv.$clone$() : sProxyMethod(n, pv));
+                    if (typeof this[n] !== 'undefined' && typeof this[n] !== 'function') {
+                        throw new Error("Method '" + n + "' clash with a property");
                     }
-
-                    this[n] = createMethod(n, f[i], this, c);
+                    this[n] = ProxyMethod(n, f[i], c);
                 }
             }
+            if (init != null) init.call(this);
             l--;
         }
 
-        // add new interfaces if they
-        for(var i=0; i < l; i++) {
-            if (pkg.instanceOf(arguments[i], pkg.Interface) === false) {
+        // add new interfaces if they has been passed
+        for(var i = 0; i < l; i++) {
+            if (arguments[i].clazz !== pkg.Interface) {
                 throw new Error("Invalid argument: " + arguments[i]);
             }
             c.$parents[arguments[i]] = true;
@@ -690,46 +911,77 @@ pkg.Class = make_template(null, function() {
         return this;
     };
 
-    $template.prototype.$super = function() {
-        if (pkg.$caller) {
-            var name = pkg.$caller.methodName,
-                $s   = pkg.$caller.boundTo.$parent,
-                args = arguments;
+    classTemplate.prototype.$super = function() {
+       if (pkg.$caller !== null) {
+            var $s = pkg.$caller.boundTo.$parent;
 
-            if (arguments.length > 0 && typeof arguments[0] === 'function') {
-                name = arguments[0].methodName;
-                args = [];
-                for(var i = 1; i < arguments.length; i++) {
-                    args[i-1] = arguments[i];
-                }
-            }
-
-            while ($s != null) {
-                var m = $s.prototype[name];
-
-                // if the method found and the method is
-                //     not proxy method       <or>
-                //     single proxy method    <or>
-                //     multiple proxy method that contains a method with the required arity
-                if (m != null && (typeof m.methods === "undefined" || m.methods[args.length] != null)) {
-                    return m.apply(this, args);
+            while ($s !== null) {
+                var m = $s.prototype[pkg.$caller.methodName];
+                if (m != null) {
+                    return m.apply(this, arguments);
                 }
                 $s = $s.$parent;
             }
-            mnf.call(this, name, args.length);
+
+            // handle method not found error
+            var cln = this.clazz && this.clazz.$name ? this.clazz.$name + "." : "";
+            throw new ReferenceError("Method '" +
+                                     cln +
+                                     (pkg.$caller.methodName === CNAME ? "constructor"
+                                                                       : pkg.$caller.methodName) + "(" + arguments.length + ")" + "' not found");
         }
         throw new Error("$super is called outside of class context");
     };
 
-    $template.prototype.$clazz = $template;
-
-    $template.prototype.$this = function() {
-        return pkg.$caller.boundTo.prototype[CNAME].apply(this, arguments);
+    classTemplate.prototype.$getSuper = function(name) {
+       if (pkg.$caller !== null) {
+            var $s = pkg.$caller.boundTo.$parent;
+            while ($s !== null) {
+                var m = $s.prototype[name];
+                if (m != null) {
+                    return m;
+                }
+                $s = $s.$parent;
+            }
+            return null;
+        }
+        throw new Error("$super is called outside of class context");
     };
 
+    classTemplate.prototype.$clone = function(map) {
+        map = map || new Map();
+
+        var f = function() {};
+        f.prototype = this.constructor.prototype;
+        var nobj = new f();
+        map.set(this, nobj);
+
+        for(var k in this) {
+            if (this.hasOwnProperty(k)) {
+                // obj's layout is obj itself
+                var t = map.get(this[k]);
+                if (t !== undefined) {
+                    nobj[k] = t;
+                } else {
+                    nobj[k] = zebra.clone(this[k], map);
+                }
+            }
+        }
+
+        // speed up clearing resources
+        map.clear();
+
+        nobj.constructor = this.constructor;
+        nobj.$hash$ = "$zObj_" + ($$$++);
+        nobj.clazz = this.clazz;
+        return nobj;
+    };
+
+    classTemplate.prototype.clazz = classTemplate;
+
     // check if the method has been already defined in the class
-    if (typeof $template.prototype.properties === 'undefined') {
-        $template.prototype.properties = function(p) {
+    if (typeof classTemplate.prototype.properties === 'undefined') {
+        classTemplate.prototype.properties = function(p) {
             return pkg.properties(this, p);
         };
     }
@@ -737,8 +989,8 @@ pkg.Class = make_template(null, function() {
     var lans = "Listeners are not supported";
 
     // check if the method has been already defined in the class
-    if (typeof $template.prototype.bind === 'undefined') {
-        $template.prototype.bind = function() {
+    if (typeof classTemplate.prototype.bind === 'undefined') {
+        classTemplate.prototype.bind = function() {
             if (this._ == null) {
                 throw new Error(lans);
             }
@@ -747,8 +999,8 @@ pkg.Class = make_template(null, function() {
     }
 
     // check if the method has been already defined in the class
-    if (typeof $template.prototype.unbind === 'undefined') {
-        $template.prototype.unbind = function() {
+    if (typeof classTemplate.prototype.unbind === 'undefined') {
+        classTemplate.prototype.unbind = function() {
             if (this._ == null) {
                 throw new Error(lans);
             }
@@ -756,214 +1008,51 @@ pkg.Class = make_template(null, function() {
         };
     }
 
-    /**
-     * Create method
-     * @param  {String} n     a method name
-     * @param  {Function} f   a method to be added
-     * @param  {Object} obj   an object where all declared method sits
-     * @param  {Class} clazz  a class
-     * @return {Function}     a method
-     */
-    function createMethod(n, f, obj, clazz) {
-        var arity = f.length, vv = obj[n];
-
-        // if passed method has been already bound to
-        // create wrapper function as a clone function
-        if (f.boundTo != null) {
-            // clone method if it is bound to a class
-            f = (function(f) {
-                return function() { return f.apply(this, arguments); };
-            })(f, arity, n);
-        }
-
-        f.boundTo    = clazz;
-        f.methodName = n;
-
-        if (typeof vv === 'undefined') {
-            // declare new class method
-            return sProxyMethod(n, f); // no parent or previously declared method exists,
-                                       // create new proxy single method
-
-            // Pay attention we cannot avoid of proxy creation since we
-            // cannot say in advance if the declared method will call
-            // super. For instance class can declare method "b" and which
-            // doesn't have an implementation on the level of parent class
-            // but it can call super method "a" method !
-        }
-
-        if (typeof vv === 'function') {
-            if (vv.$clone$ != null) {  // a proxy  method has been already defined
-
-                if (typeof vv.methods === "undefined") {  // single method proxy detected
-
-                    if (vv.f.boundTo != clazz || arity == vv.f.length) {
-                                    // single method has been defined in a parent class or the single
-                                    // method arity is the same to the new method arity than override
-                                    // the single method with a new one
-
-                        vv.f = f; // new single proxy method
-                        return vv;
-                    }
-
-                    // single method has been defined in this class and arity of
-                    // the single method differs from arity of the new method
-                    // than overload the old method with new one method
-                    var sw = nProxyMethod(n);
-                    sw.methods[vv.f.length] = vv.f;
-                    sw.methods[arity] = f;
-                    return sw;
-                }
-
-                // multiple methods proxy detected
-                vv.methods[arity] = f;
-                return vv;
-            }
-
-            // old method has been defined directly in class prototype field
-            if (arity == vv.length) {  // the new method arity is the same to old method
-                                       // arity than override it with single method proxy
-
-                return sProxyMethod(n, f);  // new single proxy method
-            }
-
-            // the new method arity is not the same to new one
-            // than overload it with new one ()
-            var sw = nProxyMethod(n);
-            vv.methodName = n;
-            vv.boundTo    = clazz;
-            sw.methods[vv.length] = vv;
-            sw.methods[arity] = f;
-            return sw;
-        }
-
-        throw new Error("Method '" + n + "' clash with a property");
-    }
-
-    /**
-     * Extend existent class with the given methods and interfaces
-     * Be  careful to use the method, pay attention the following facts:
-
-    - only the given class and the classes that inherit the class __after the extend method calling__ get the updates
-    - if the class gets method that already defined the old method will be overridden
-    - **"$super"** cannot be called from the method the class is extended
-
-     *
-     * For example:
-
-        var A = zebra.Class([ // declare class A that defines one "a" method
-            function a() {
-                console.log("A:a()");
-            }
-        ]);
-
-        var a = new A();
-        a.a();  // show "A:a()" message
-
-        A.extend([
-            function b() {
-                console.log("EA:b()");
-            },
-
-            function a() {   // redefine "a" method
-                console.log("EA:a()");
-            }
-        ]);
-
-        // can call b() method we just added to the instance class
-        a.b(); // show "EA:b()" message
-        a.a(); // show "EA:a()" message
-
-     * @param {Array} methods array of the methods the class have to be
-     * extended with
-     * @method extend
-     */
-    function extend(df) {
-        if (Array.isArray(df) === false) {
-            throw new Error("Invalid class definition '" + df + "', array is expected");
-        }
-
-        for(var i=0; i < df.length; i++) {
-            var f     = df[i],
-                n     = FN(f),
-                arity = f.length;
-
-            // map user defined constructor to internal constructor name
-            if (n == CDNAME) n = CNAME;
-
-            if (n[0] === "$") {
-                // populate prototype fields if a special method has been defined
-                if (n === "$prototype") {
-                    var protoFields = {};
-                    f.call(protoFields, this);  // call $prototype to populate methods in protoFields
-                                                     // dictionary
-
-                    // add "boundTo" and "methodName" fields to the prototype methods
-                    // and add the new method to class prototype
-                    for(var k in protoFields) {
-                        if (protoFields.hasOwnProperty(k)) {
-                            var protoFieldVal = protoFields[k];
-                            // map user defined constructor to internal constructor name
-                            if (k == CDNAME) k = CNAME;
-
-                            this.prototype[k] = protoFieldVal;
-                            if (protoFieldVal && typeof protoFieldVal === "function") {
-                                protoFieldVal.methodName = k;
-                                protoFieldVal.boundTo = this;
-                            }
-                        }
-                    }
-                    continue;
-                }
-
-                // populate class level fields if a special method has been defined
-                if (n === "$clazz") {
-                    f.call(this);
-                    continue;
-                }
-            }
-
-            this.prototype[n] = createMethod(n, f, this.prototype, this);
-        }
-    }
-
-    extend.call($template, df);
+    mixing(classTemplate, classMethods, true);
 
     // populate static fields
     // TODO: exclude the basic static methods and static constant
     // static inheritance
-    if ($parent != null) {
-        for (var k in $parent) {
-            if (k[0] != '$' && $parent.hasOwnProperty(k) && $template.hasOwnProperty(k) === false) {
-                var val = $parent[k];
-
-                // clone direct JS Object
-                if (val != null && val.constructor === Object) {
-                    var nval = {};
-                    for (var vk in val) {
-                        if (val.hasOwnProperty(vk)) nval[vk] = val[vk];
-                    }
-                    $template[k] = nval;
-                }
-                else {
-                    $template[k] = $parent[k];
-                }
+    if (parentClass != null) {
+        for (var k in parentClass) {
+            if (k[0] !== '$' &&
+                parentClass.hasOwnProperty(k) &&
+                classTemplate.hasOwnProperty(k) === false)
+            {
+                classTemplate[k] = pkg.clone(parentClass[k]);
             }
         }
     }
 
      // add extend later to avoid the method be inherited as a class static field
-    $template.extend = extend;
+    classTemplate.extend = function() {
+        // inject class
+        if (arguments[1] !== false && this.$isInjected !== true) {
+            // create intermediate class
+            var A = this.$parent != null ? Class(this.$parent, []) : Class([]);
 
-    // add parent class constructor(s) if the class doesn't declare own
-    // constructors
-    if ($template.$parent != null &&
-        $template.$parent.prototype[CNAME] != null &&
-        $template.prototype[CNAME] == null)
-    {
-        $template.prototype[CNAME] = $template.$parent.prototype[CNAME];
-    }
+            // copy this class prototypes methods to intermediate class A and re-define
+            // boundTo to the intermediate class A if they were bound to this class
+            copyProtoFields(A, this, function(targetClazz, srcClazz, addedMethod, sourceMethod) {
+                if (addedMethod != sourceMethod && addedMethod.boundTo === srcClazz) {
+                    addedMethod.boundTo = A;
+                    if (sourceMethod.boundTo === srcClazz) sourceMethod.boundTo = A;
+                }
+            });
 
-    return $template;
+            this.$parent = A;
+            this.$isInjected = true;
+        }
+
+        mixing.call(this, this, arguments[0], true);
+    };
+
+
+    classTemplate.mixing = function() {
+        mixing.call(this, this, arguments[0]);
+    };
+
+    return classTemplate;
 });
 
 var Class    = pkg.Class,
@@ -979,7 +1068,7 @@ pkg.$cacheSize = 7777;
  * @param  {String} key a key to an object. The key is hierarchical reference starting with the global
  * name space as root. For instance "test.a" key will fetch $global.test.a object.
  * @return {Object}  an object
- * @api  zebra.$cache
+ * @api  zebkit.$cache
  */
 pkg.$cache = function(key) {
     // don't cache global objects
@@ -1029,7 +1118,7 @@ pkg.$cache = function(key) {
         return ctx;
     }
 
-    throw new Error("Class '" + key + "' cannot be found");
+    throw new Error("Reference '" + key + "' not found");
 };
 
 /**
@@ -1038,31 +1127,36 @@ pkg.$cache = function(key) {
  * @return {Function} a class. Throws exception if the class cannot be
  * resolved by the given class name
  * @method forName
- * @api  zebra.forName()
+ * @throws Error
+ * @api  zebkit.forName()
  */
 Class.forName = function(name) {
     return pkg.$cache(name);
 };
 
+Class.newInstance = function() {
+    return pkg.newInstance(this, arguments);
+};
+
 /**
  * Test if the given object is instance of the specified class or interface. It is preferable
  * to use this method instead of JavaScript "instanceof" operator whenever you are dealing with
- * zebra classes and interfaces.
+ * zebkit classes and interfaces.
  * @param  {Object} obj an object to be evaluated
  * @param  {Function} clazz a class or interface
  * @return {Boolean} true if a passed object is instance of the given class or interface
  * @method instanceOf
- * @api  zebra.instanceOf()
+ * @api  zebkit.instanceOf()
  */
 pkg.instanceOf = function(obj, clazz) {
     if (clazz != null) {
-        if (obj == null || typeof obj.$clazz === 'undefined') {
+        if (obj == null || typeof obj.clazz === 'undefined') {
             return false;
         }
 
-        var c = obj.$clazz;
+        var c = obj.clazz;
         return c != null && (c === clazz ||
-               (typeof c.$parents !== 'undefined' && c.$parents.hasOwnProperty(clazz)));
+               (typeof c.$parents !== 'undefined' && c.$parents.hasOwnProperty(clazz.$hash$)));
     }
 
     throw new Error("instanceOf(): null class");
@@ -1075,7 +1169,7 @@ pkg.instanceOf = function(obj, clazz) {
  * the method to provide safe place to run your code safely in proper
  * place and at proper time.
 
-        zebra.ready(function() {
+        zebkit.ready(function() {
             // run code here safely
             ...
         });
@@ -1084,14 +1178,14 @@ pkg.instanceOf = function(obj, clazz) {
  * safely. If there no one callback method has been passed it causes busy
  * flag will be decremented.
  * @method ready
- * @api  zebra.ready()
+ * @api  zebkit.ready()
  */
 pkg.ready = function() {
     if (arguments.length === 0) {
         if ($busy > 0) $busy--;
     }
     else {
-        if (arguments.length == 1 &&
+        if (arguments.length === 1 &&
             $busy === 0 &&
             $readyCallbacks.length === 0)
         {
@@ -1104,19 +1198,20 @@ pkg.ready = function() {
         $readyCallbacks.push(arguments[i]);
     }
 
-    while($busy === 0 && $readyCallbacks.length > 0) {
+    while ($busy === 0 && $readyCallbacks.length > 0) {
         $readyCallbacks.shift()();
     }
 };
 
 pkg.package = function(name, callback) {
-    var p = zebra(name);
+    var p = zebkit(name);
     for(var i = 1; i < arguments.length; i++) {
         var f = arguments[i];
         // call in ready section since every call
         // can have influence on ready state
-        zebra.ready(function() {
-            f.call(p, p, zebra.Class);
+        zebkit.ready(function() {
+            f.call(p, p, zebkit.Class);
+            pkg.$resolveClassNames(p);
         });
     }
 };
@@ -1127,8 +1222,8 @@ pkg.busy = function() { $busy++; };
  * Dummy class that implements nothing but can be useful to instantiate
  * anonymous classes with some on "the fly" functionality:
 
-        // instantiate and use zebra class with method "a()" implemented
-        var ac = new zebra.Dummy([
+        // instantiate and use zebkit class with method "a()" implemented
+        var ac = new zebkit.Dummy([
              function a() {
                 ...
              }
@@ -1137,49 +1232,37 @@ pkg.busy = function() { $busy++; };
         // use it
         ac.a();
  *
- * @class zebra.Dummy
+ * @class zebkit.Dummy
  */
 pkg.Dummy = Class([]);
 
-pkg.isInBrowser = typeof navigator !== "undefined";
-pkg.isIE        = pkg.isInBrowser && (Object.hasOwnProperty.call(window, "ActiveXObject") || !!window.ActiveXObject);
-pkg.isFF        = pkg.isInBrowser && window.mozInnerScreenX != null;
-pkg.isTouchable = pkg.isInBrowser && ( (pkg.isIE === false && (!!('ontouchstart' in window ) || !!('onmsgesturechange' in window))) ||
-                                       (!!window.navigator['msPointerEnabled'] && !!window.navigator["msMaxTouchPoints"] > 0)); // IE10
-
-pkg.isMacOS = pkg.isInBrowser && navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
 // TODO:
 //!!! this code resolve names of classes  defined in a package
 //    should be re-worked to use more generic and trust-able mechanism
-pkg.$resolveClassNames = function() {
-    pkg(function(n, p) {
-        function collect(pp, p) {
-            for(var k in p) {
-                if (k[0] != "$" &&  p[k] != null && p[k].$name == null && p.hasOwnProperty(k) && zebra.instanceOf(p[k], Class)) {
-                    p[k].$name = pp != null ? pp + "." + k : k;
-                    collect(p[k].$name, p[k]);
-                }
+pkg.$resolveClassNames = function(p) {
+    function collect(prefix, p) {
+        for(var k in p) {
+            if (k[0]   !== "$"         &&
+                p[k] != null         &&
+                p[k].$name == null   &&
+                p.hasOwnProperty(k)  &&
+                p[k].clazz === Class   )
+            {
+                p[k].$name = prefix != null ? prefix + "." + k : k;
+                collect(p[k].$name, p[k]);
             }
         }
-        collect(null, p);
-    });
-};
+    }
 
-function complete() {
-    // TODO:
-    //!!! this code resolve names of classes  defined in a package
-    //    should be re-worked to use more generic and trust-able mechanism
-    try {
-        pkg.$resolveClassNames();
+    if (arguments.length === 0) {
+        pkg(function(name, p) {
+            collect(null, p);
+        });
+    } else {
+        collect(null, p);
     }
-    catch(e) {
-        pkg.ready();
-        console.log("" + (e.stack ? e.stack : e));
-        throw e;
-    }
-    pkg.ready();
-}
+};
 
 if (pkg.isInBrowser) {
     var m = window.location.search.match(/[?&][a-zA-Z0-9_.]+=[^?&=]+/g), env = {};
@@ -1196,7 +1279,7 @@ if (pkg.isInBrowser) {
      * URL class
      * @param {String} url an url
      * @constructor
-     * @class zebra.URL
+     * @class zebkit.URL
      */
     pkg.URL = function(url) {
         var a = document.createElement('a');
@@ -1206,7 +1289,7 @@ if (pkg.isInBrowser) {
         if (m == null) {
             m = purl.exec(window.location);
             if (m == null) {
-                throw Error("Cannot resolve '" + url + "' url");
+                throw new Error("Cannot resolve '" + url + "' url");
             }
             a.href = m[1] + "//" + m[2] + m[3].substring(0, p.lastIndexOf("/") + 1) + url;
             m = purl.exec(a.href);
@@ -1252,7 +1335,7 @@ if (pkg.isInBrowser) {
 
     /**
      * Get a parent URL of the URL
-     * @return  {zebra.URL} a parent URL
+     * @return  {zebkit.URL} a parent URL
      * @method getParentURL
      */
     pkg.URL.prototype.getParentURL = function() {
@@ -1285,23 +1368,25 @@ if (pkg.isInBrowser) {
             throw new Error("Absolute URL '" + p + "' cannot be joined");
         }
 
-        return p[0] == '/' ? this.protocol + "//" + this.host + p
-                           : this.protocol + "//" + this.host + this.path + (this.path[this.path.length-1] == '/' ? '' : '/') + p;
+        return p[0] === '/' ? this.protocol + "//" + this.host + p
+                            : this.protocol + "//" + this.host + this.path + (this.path[this.path.length-1] === '/' ? '' : '/') + p;
     };
 
     var $interval = setInterval(function () {
-        if (document.readyState == "complete") {
+        if (document.readyState === "complete") {
             clearInterval($interval);
-            complete();
+            pkg.ready();
         }
     }, 100);
+} else {
+    pkg.ready();
 }
-else {
-    complete();
-}
+
+pkg.ready(function() {
+    pkg.$resolveClassNames();
+});
 
 /**
  * @for
  */
-
 })();

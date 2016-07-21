@@ -2,25 +2,25 @@
  * Collection of variouse data models.
  * @module data
  * @main
- * @requires zebra, util
+ * @requires zebkit, util
  */
 
-(function(pkg, Class, Interface) {
+(function(pkg, Class) {
 
 pkg.descent = function descent(a, b) {
     if (a == null) return 1;
-    return (zebra.isString(a)) ? a.localeCompare(b) : a - b;
+    return (zebkit.isString(a)) ? a.localeCompare(b) : a - b;
 };
 
 pkg.ascent = function ascent(a, b) {
     if (b == null) return 1;
-    return (zebra.isString(b)) ? b.localeCompare(a) : b - a;
+    return (zebkit.isString(b)) ? b.localeCompare(a) : b - a;
 };
 
 /**
- * Text model interface
- * @class zebra.data.TextModel
- * @interface
+ * Text model class
+ * @class zebkit.data.TextModel
+ * @abstract
 */
 
 /**
@@ -81,7 +81,7 @@ pkg.ascent = function ascent(a, b) {
 
  *
  * @event textUpdated
- * @param {zebra.data.Text} src a text model that triggers the event
+ * @param {zebkit.data.Text} src a text model that triggers the event
  * @param {Boolean}  b a flag that is true if a string has been written
  * in the text model, false if the model substring has been removed
  * @param {Integer}  off an offset starting form that the text update
@@ -93,34 +93,50 @@ pkg.ascent = function ascent(a, b) {
  * @param {Integer}  lines a number of lines that has been affected
  * by the text model update
  */
-pkg.TextModel = Interface();
-
-
-var oobi = "Index is out of bounds: ";
-
-function Line(s) {
-    this.s = s;
-}
-
-//  toString for array.join method
-Line.prototype.toString = function() { return this.s; };
-
-pkg.TextModelListeners = zebra.util.ListenersClass("textUpdated");
+pkg.TextModel = Class([
+    function $clazz() {
+        this.Listeners = zebkit.util.ListenersClass("textUpdated");
+    }
+]);
 
 /**
  * Multi-lines text model implementation
- * @class zebra.data.Text
+ * @class zebkit.data.Text
  * @param  {String}  [s] the specified text the model has to be filled
  * @constructor
- * @extends zebra.data.TextModel
+ * @extends zebkit.data.TextModel
  */
 pkg.Text = Class(pkg.TextModel, [
+    function $clazz() {
+        this.Line = function(s) {
+            this.s = s;
+        };
+
+        //  toString for array.join method
+        this.Line.prototype.toString = function() {
+            return this.s;
+        };
+    },
+
     function $prototype() {
         this.textLength = 0;
 
-        this.getLnInfo = function(lines, start, startOffset, o){
-            for(; start < lines.length; start++){
-                var line = lines[start].s;
+        /**
+         * Detect line by offset starting from the given line and offset.
+         * @param  {Integer} [start]       start line
+         * @param  {Integer} [startOffset] start offset of the start line
+         * @param  {Integer} o             offset to detect line
+         * @private
+         * @method calcLineByOffset
+         * @return {Array}  an array that consists of two elements: detected line index and its offset
+         */
+        this.calcLineByOffset = function(start, startOffset, o) {
+            if (arguments.length === 1) {
+                startOffset = start = 0;
+            }
+
+            for(; start < this.lines.length; start++){
+                var line = this.lines[start].s;
                 if (o >= startOffset && o <= startOffset + line.length){
                     return [start, startOffset];
                 }
@@ -129,11 +145,20 @@ pkg.Text = Class(pkg.TextModel, [
             return [];
         };
 
-        this.$lineTags = function(i, value) {
+        this.calcLineOffset = function(line) {
+            var off = 0;
+            for(var i = 0; i < line; i++){
+                off += (this.lines[i].s.length + 1);
+            }
+            return off;
+        };
+
+        this.$lineTags = function(i) {
             return this.lines[i];
         };
 
         this.getLine = function(line) {
+            if (line < 0 || line >= this.lines.length) throw RangeError(line);
             return this.lines[line].s;
         };
 
@@ -149,22 +174,71 @@ pkg.Text = Class(pkg.TextModel, [
             return this.textLength;
         };
 
+        this.removeLines = function(start, size) {
+            if (start < 0 || start >= this.lines.length) {
+                throw new RangeError(start);
+            }
+
+            if (arguments.length === 1) {
+                size = 1;
+            } else {
+                if (size <= 0) {
+                    throw new Error("Invalid number of lines : " + size);
+                }
+            }
+
+            // normalize number required lines to be removed
+            if ((start + size) > this.lines.length) {
+                size = this.lines.length - start;
+            }
+
+            var end  = start + size - 1,            // last line to be removed
+                off  = this.calcLineOffset(start),  // offset of the first line to be removed
+                olen = start !== end ? this.calcLineOffset(end) + this.lines[end].s.length + 1 - off
+                                     : this.lines[start].s.length + 1;
+
+
+            // if this is the last line we have to correct offset to point to "\n" character in text
+            if (start === this.lines.length - 1) {
+                off--;
+            }
+
+            this.lines.splice(start, size);
+            this._.textUpdated(this, false, off, olen, start, size);
+        };
+
+        this.insertLines = function(startLine) {
+            if (startLine < 0 || startLine > this.lines.length) {
+                throw new RangeError(startLine);
+            }
+
+            var off = this.calcLineOffset(startLine), offlen = 0;
+            if (startLine === this.lines.length) {
+                off--;
+            }
+
+            for(var i = 1; i < arguments.length; i++) {
+                offlen += arguments[i].length + 1;
+                this.lines.splice(startLine + i - 1, 0, new this.clazz.Line(arguments[i]));
+            }
+            this._.textUpdated(this, true, off, offlen, startLine, arguments.length - 1);
+        };
+
         this.write = function (s, offset) {
             if (s.length > 0) {
                 var slen    = s.length,
-                    info    = this.getLnInfo(this.lines, 0, 0, offset),
+                    info    = this.calcLineByOffset(0,0,offset),
                     line    = this.lines[info[0]].s,
                     j       = 0,
                     lineOff = offset - info[1],
                     tmp     = line.substring(0, lineOff) + s + line.substring(lineOff);
 
-                for(; j < slen && s[j] != '\n'; j++);
+                for(; j < slen && s[j] !== '\n'; j++);
 
                 if (j >= slen) {
                     this.lines[info[0]].s = tmp;
                     j = 1;
-                }
-                else {
+                } else {
                     this.lines.splice(info[0], 1);
                     j = this.parse(info[0], tmp, this.lines);
                 }
@@ -180,19 +254,19 @@ pkg.Text = Class(pkg.TextModel, [
 
         this.remove = function(offset, size) {
             if (size > 0) {
-                var i1   = this.getLnInfo(this.lines, 0, 0, offset),
-                    i2   = this.getLnInfo(this.lines, i1[0], i1[1], offset + size),
-                    l2   = this.lines[i2[0]].s,
+                var i1   = this.calcLineByOffset(0, 0, offset),
+                    i2   = this.calcLineByOffset(i1[0], i1[1], offset + size),
                     l1   = this.lines[i1[0]].s,
+                    l2   = this.lines[i2[0]].s,
                     off1 = offset - i1[1], off2 = offset + size - i2[1],
                     buf  = l1.substring(0, off1) + l2.substring(off2);
 
-                if (i2[0] == i1[0]) {
-                    this.lines.splice(i1[0], 1, new Line(buf));
+                if (i2[0] === i1[0]) {
+                    this.lines.splice(i1[0], 1, new this.clazz.Line(buf));
                 }
                 else {
                     this.lines.splice(i1[0], i2[0] - i1[0] + 1);
-                    this.lines.splice(i1[0], 0, new Line(buf));
+                    this.lines.splice(i1[0], 0, new this.clazz.Line(buf));
                 }
 
                 if (size > 0) {
@@ -209,7 +283,7 @@ pkg.Text = Class(pkg.TextModel, [
             for(var index = 0; index <= size; prevIndex = index, startLine++){
                 var fi = text.indexOf("\n", index);
                 index = (fi < 0 ? size : fi);
-                this.lines.splice(startLine, 0, new Line(text.substring(prevIndex, index)));
+                this.lines.splice(startLine, 0, new this.clazz.Line(text.substring(prevIndex, index)));
                 index++;
             }
             return startLine - prevStartLine;
@@ -219,12 +293,13 @@ pkg.Text = Class(pkg.TextModel, [
             if (text == null) {
                 throw new Error("Invalid null string");
             }
+
             var old = this.getValue();
             if (old !== text) {
                 if (old.length > 0) {
                     var numLines = this.getLines(), txtLen = this.getTextLength();
                     this.lines.length = 0;
-                    this.lines = [ new Line("") ];
+                    this.lines = [ new this.clazz.Line("") ];
                     this._.textUpdated(this, false, 0, txtLen, 0, numLines);
                 }
 
@@ -238,8 +313,8 @@ pkg.Text = Class(pkg.TextModel, [
         };
 
         this[''] = function(s){
-            this.lines = [ new Line("") ];
-            this._ = new pkg.TextModelListeners();
+            this.lines = [ new this.clazz.Line("") ];
+            this._ = new this.clazz.Listeners();
             this.setValue(s == null ? "" : s);
         };
     }
@@ -250,8 +325,8 @@ pkg.Text = Class(pkg.TextModel, [
  * @param  {String}  [s] the specified text the model has to be filled
  * @param  {Integer} [max] the specified maximal text length
  * @constructor
- * @class zebra.data.SingleLineTxt
- * @extends zebra.data.TextModel
+ * @class zebkit.data.SingleLineTxt
+ * @extends zebkit.data.TextModel
  */
 pkg.SingleLineTxt = Class(pkg.TextModel, [
     function $prototype() {
@@ -288,7 +363,7 @@ pkg.SingleLineTxt = Class(pkg.TextModel, [
 
         this.getLine = function(line){
             if (line !== 0) {
-                throw new Error(oobi + line);
+                throw new RangeError(line);
             }
             return this.buf;
         };
@@ -320,7 +395,7 @@ pkg.SingleLineTxt = Class(pkg.TextModel, [
                 var nl = this.buf.substring(0, offset) +
                          this.buf.substring(offset + size);
 
-                if (nl.length != this.buf.length && (this.validate == null || this.validate(nl))) {
+                if (nl.length !== this.buf.length && (this.validate == null || this.validate(nl))) {
                     this.buf = nl;
                     this._.textUpdated(this, false, offset, size, 0, 1);
                     return true;
@@ -332,6 +407,10 @@ pkg.SingleLineTxt = Class(pkg.TextModel, [
         this.setValue = function(text){
             if (text == null) {
                 throw new Error("Invalid null string");
+            }
+
+            if (this.validate != null && this.validate(text) === false) {
+                return false;
             }
 
             // cut to next line
@@ -353,6 +432,7 @@ pkg.SingleLineTxt = Class(pkg.TextModel, [
                 this._.textUpdated(this, true, 0, text.length, 0, 1);
                 return true;
             }
+
             return false;
         };
 
@@ -362,7 +442,7 @@ pkg.SingleLineTxt = Class(pkg.TextModel, [
          * @param  {Integer} max a maximal length of text
          */
         this.setMaxLength = function (max){
-            if (max != this.maxLen){
+            if (max !== this.maxLen){
                 this.maxLen = max;
                 this.setValue("");
             }
@@ -376,19 +456,15 @@ pkg.SingleLineTxt = Class(pkg.TextModel, [
          *  @param {String} text a text
          *  @return {Boolean} return true if the text is valid otherwise return false
          */
-
-
         this[''] = function (s, max) {
             this.maxLen = max == null ? -1 : max;
             this.buf = "";
             this.extra = 0;
-            this._ = new pkg.TextModelListeners();
+            this._ = new this.clazz.Listeners();
             this.setValue(s == null ? "" : s);
         };
     }
 ]);
-
-pkg.ListModelListeners = zebra.util.ListenersClass("elementInserted", "elementRemoved", "elementSet");
 
 /**
  * List model class
@@ -396,10 +472,10 @@ pkg.ListModelListeners = zebra.util.ListenersClass("elementInserted", "elementRe
  * @example
 
       // create list model that contains three integer elements
-      var l = new zebra.data.ListModel([1,2,3]);
+      var l = new zebkit.data.ListModel([1,2,3]);
 
  * @constructor
- * @class zebra.data.ListModel
+ * @class zebkit.data.ListModel
  */
 
  /**
@@ -410,7 +486,7 @@ pkg.ListModelListeners = zebra.util.ListenersClass("elementInserted", "elementRe
      });
 
   * @event elementInserted
-  * @param {zebra.data.ListModel} src a list model that triggers the event
+  * @param {zebkit.data.ListModel} src a list model that triggers the event
   * @param {Object}  o an element that has been added
   * @param {Integer} i an index at that the new element has been added
   */
@@ -423,7 +499,7 @@ pkg.ListModelListeners = zebra.util.ListenersClass("elementInserted", "elementRe
      });
 
   * @event elementRemoved
-  * @param {zebra.data.ListModel} src a list model that triggers the event
+  * @param {zebkit.data.ListModel} src a list model that triggers the event
   * @param {Object}  o an element that has been removed
   * @param {Integer} i an index at that the element has been removed
   */
@@ -431,18 +507,22 @@ pkg.ListModelListeners = zebra.util.ListenersClass("elementInserted", "elementRe
  /**
   * Fired when an element has been re-set
 
-     list.bind(function elementSet(src, o, pe, i) {
+     list.bind(function elementSet(src, o, p, i) {
          ...
      });
 
   * @event elementSet
-  * @param {zebra.data.ListModel} src a list model that triggers the event
+  * @param {zebkit.data.ListModel} src a list model that triggers the event
   * @param {Object}  o an element that has been set
-  * @param {Object}  pe a previous element
+  * @param {Object}  p a previous element
   * @param {Integer} i an index at that the element has been re-set
   */
 
 pkg.ListModel = Class([
+    function $clazz () {
+        this.Listeners = zebkit.util.ListenersClass("elementInserted", "elementRemoved", "elementSet");
+    },
+
     function $prototype() {
         /**
          * Get an item stored at the given location in the list
@@ -452,7 +532,7 @@ pkg.ListModel = Class([
          */
         this.get = function(i) {
             if (i < 0 || i >= this.d.length) {
-                throw new Error(oobi + i);
+                throw new RangeError(i);
             }
             return this.d[i];
         };
@@ -501,12 +581,12 @@ pkg.ListModel = Class([
         /**
          * Insert the given element into the given position of the list
          * @method insert
-         * @param {Object} o an element to be inserted into the list
          * @param {Integer} i a position at which the element has to be inserted into the list
+         * @param {Object} o an element to be inserted into the list
          */
-        this.insert = function(o,i){
-            if(i < 0 || i >= this.d.length) {
-                throw new Error(oobi + i);
+        this.insert = function(i, o){
+            if (i < 0 || i > this.d.length) {
+                throw new RangeError(i);
             }
             this.d.splice(i, 0, o);
             this._.elementInserted(this, o, i);
@@ -523,14 +603,14 @@ pkg.ListModel = Class([
 
         /**
          * Set the new element at the given position
-         * @method set
-         * @param  {Object} o a new element to be set as the list element at the given position
+         * @method setAt
          * @param  {Integer} i a position
+         * @param  {Object} o a new element to be set as the list element at the given position
          * @return {Object}  previous element that was stored at the given position
          */
-        this.set = function (o,i){
+        this.setAt = function(i, o) {
             if (i < 0 || i >= this.d.length) {
-                throw new Error(oobi + i);
+                throw new RangeError(i);
             }
             var pe = this.d[i];
             this.d[i] = o;
@@ -559,7 +639,7 @@ pkg.ListModel = Class([
         };
 
         this[''] = function() {
-            this._ = new pkg.ListModelListeners();
+            this._ = new this.clazz.Listeners();
             this.d = (arguments.length === 0) ? [] : arguments[0];
         };
     }
@@ -568,11 +648,11 @@ pkg.ListModel = Class([
 /**
  * Tree model item class. The structure is used by tree model to store
  * tree items values, parent and children item references.
- * @class zebra.data.Item
+ * @class zebkit.data.Item
  * @param  {Object} [v] the item value
  * @constructor
  */
-var Item = pkg.Item = Class([
+pkg.Item = Class([
     function $prototype() {
         this[''] = function(v) {
             /**
@@ -596,7 +676,7 @@ var Item = pkg.Item = Class([
             /**
              * Reference to a parent item
              * @attribute parent
-             * @type {zebra.data.Item}
+             * @type {zebkit.data.Item}
              * @default undefined
              * @readOnly
              */
@@ -604,19 +684,15 @@ var Item = pkg.Item = Class([
     }
 ]);
 
-
-pkg.TreeModelListeners = zebra.util.ListenersClass("itemModified", "itemRemoved", "itemInserted");
-
-
 /**
  * Tree model class. The class is simple and handy way to keep hierarchical structure.
  * @constructor
- * @param  {zebra.data.Item|Object} [r] a root item. As the argument you can pass "zebra.data.Item" or
+ * @param  {zebkit.data.Item|Object} [r] a root item. As the argument you can pass "zebkit.data.Item" or
  * a JavaType object. In the second case you can describe the tree as follow:
 
      // create tree model initialized with tree structure passed as
      // special formated JavaScript object
-     var tree = new zebra.data.TreeModel({ value:"Root",
+     var tree = new zebkit.data.TreeModel({ value:"Root",
                                           kids: [
                                               "Root kid 1",
                                               {
@@ -625,7 +701,7 @@ pkg.TreeModelListeners = zebra.util.ListenersClass("itemModified", "itemRemoved"
                                               }
                                           ]});
 
- * @class zebra.data.TreeModel
+ * @class zebkit.data.TreeModel
  */
 
 /**
@@ -636,8 +712,8 @@ pkg.TreeModelListeners = zebra.util.ListenersClass("itemModified", "itemRemoved"
     });
 
  * @event itemModified
- * @param {zebra.data.TreeModel} src a tree model that triggers the event
- * @param {zebra.data.Item}  item an item whose value has been updated
+ * @param {zebkit.data.TreeModel} src a tree model that triggers the event
+ * @param {zebkit.data.Item}  item an item whose value has been updated
  */
 
 /**
@@ -648,8 +724,8 @@ pkg.TreeModelListeners = zebra.util.ListenersClass("itemModified", "itemRemoved"
     });
 
  * @event itemRemoved
- * @param {zebra.data.TreeModel} src a tree model that triggers the event
- * @param {zebra.data.Item}  item an item that has been removed from the tree model
+ * @param {zebkit.data.TreeModel} src a tree model that triggers the event
+ * @param {zebkit.data.Item}  item an item that has been removed from the tree model
  */
 
 /**
@@ -658,14 +734,16 @@ pkg.TreeModelListeners = zebra.util.ListenersClass("itemModified", "itemRemoved"
     });
 
  * @event itemInserted
- * @param {zebra.data.TreeModel} src a tree model that triggers the event
- * @param {zebra.data.Item}  item an item that has been inserted into the tree model
+ * @param {zebkit.data.TreeModel} src a tree model that triggers the event
+ * @param {zebkit.data.Item}  item an item that has been inserted into the tree model
  */
 
 pkg.TreeModel = Class([
     function $clazz() {
+        this.Listeners = zebkit.util.ListenersClass("itemModified", "itemRemoved", "itemInserted");
+
         this.create = function(r, p) {
-            var item = new Item(r.hasOwnProperty("value")? r.value : r);
+            var item = new pkg.Item(r.hasOwnProperty("value")? r.value : r);
             item.parent = p;
             if (r.hasOwnProperty("kids")) {
                 for(var i = 0; i < r.kids.length; i++) {
@@ -723,7 +801,7 @@ pkg.TreeModel = Class([
         /**
          * Update a value of the given tree model item with the new one
          * @method setValue
-         * @param  {zebra.data.Item} item an item whose value has to be updated
+         * @param  {zebkit.data.Item} item an item whose value has to be updated
          * @param  {[type]} v   a new item value
          */
         this.setValue = function(item, v){
@@ -734,8 +812,8 @@ pkg.TreeModel = Class([
         /**
          * Add the new item to the tree model as a children element of the given parent item
          * @method add
-         * @param  {zebra.data.Item} to a parent item to which the new item has to be added
-         * @param  {Object|zebra.data.Item} an item or value of the item to be
+         * @param  {zebkit.data.Item} to a parent item to which the new item has to be added
+         * @param  {Object|zebkit.data.Item} an item or value of the item to be
          * added to the parent item of the tree model
          */
         this.add = function(to,item){
@@ -746,17 +824,17 @@ pkg.TreeModel = Class([
          * Insert the new item to the tree model as a children element at the
          * given position of the parent element
          * @method insert
-         * @param  {zebra.data.Item} to a parent item to which the new item
+         * @param  {zebkit.data.Item} to a parent item to which the new item
          * has to be inserted
-         * @param  {Object|zebra.data.Item} an item or value of the item to be
+         * @param  {Object|zebkit.data.Item} an item or value of the item to be
          * inserted to the parent item
          * @param  {Integer} i a position the new item has to be inserted into
          * the parent item
          */
         this.insert = function(to,item,i){
-            if (i < 0 || to.kids.length < i) throw new Error(oobi + i);
-            if (zebra.isString(item)) {
-                item = new Item(item);
+            if (i < 0 || to.kids.length < i) throw new RangeError(i);
+            if (zebkit.isString(item)) {
+                item = new pkg.Item(item);
             }
             to.kids.splice(i, 0, item);
             item.parent = to;
@@ -770,7 +848,7 @@ pkg.TreeModel = Class([
         /**
          * Remove the given item from the tree model
          * @method remove
-         * @param  {zebra.data.Item} item an item to be removed from the tree model
+         * @param  {zebkit.data.Item} item an item to be removed from the tree model
          */
         this.remove = function(item){
             if (item == this.root) {
@@ -800,7 +878,7 @@ pkg.TreeModel = Class([
         /**
          * Remove all children items from the given item of the tree model
          * @method removeKids
-         * @param  {zebra.data.Item} item an item from that all children items have to be removed
+         * @param  {zebkit.data.Item} item an item from that all children items have to be removed
          */
         this.removeKids = function(item) {
             for(var i = item.kids.length - 1; i >= 0; i--) {
@@ -809,24 +887,20 @@ pkg.TreeModel = Class([
         };
 
         this[''] = function(r) {
-            if (arguments.length === 0) r = new Item();
+            if (arguments.length === 0) r = new pkg.Item();
 
             /**
              * Reference to the tree model root item
              * @attribute root
-             * @type {zebra.data.Item}
+             * @type {zebkit.data.Item}
              * @readOnly
              */
-            this.root = zebra.instanceOf(r, Item) ? r : pkg.TreeModel.create(r);
+            this.root = zebkit.instanceOf(r, pkg.Item) ? r : pkg.TreeModel.create(r);
             this.root.parent = null;
-            this._ = new pkg.TreeModelListeners();
+            this._ = new this.clazz.Listeners();
         };
     }
 ]);
-
-pkg.MatrixListeners = zebra.util.ListenersClass("matrixResized", "cellModified",
-                                        "matrixSorted", "matrixRowInserted",
-                                        "matrixColInserted");
 
 /**
  *  Matrix model class.
@@ -834,9 +908,15 @@ pkg.MatrixListeners = zebra.util.ListenersClass("matrixResized", "cellModified",
  *  @param  {Array of Array} [data] the given data
  *  @param  {Integer} [rows] a number of rows
  *  @param  {Integer} [cols] a number of columns
- *  @class zebra.data.Matrix
+ *  @class zebkit.data.Matrix
  */
 pkg.Matrix = Class([
+    function $clazz() {
+        this.Listeners = zebkit.util.ListenersClass("matrixResized", "cellModified",
+                                                   "matrixSorted", "matrixRowInserted",
+                                                   "matrixColInserted");
+    },
+
     function $prototype() {
         /**
          * Fired when the matrix model size (number of rows or columns) is changed.
@@ -846,7 +926,7 @@ pkg.Matrix = Class([
          });
 
          * @event matrixResized
-         * @param {zebra.data.Matrix} src a matrix that triggers the event
+         * @param {zebkit.data.Matrix} src a matrix that triggers the event
          * @param {Integer}  pr a previous number of rows
          * @param {Integer}  pc a previous number of columns
          */
@@ -859,7 +939,7 @@ pkg.Matrix = Class([
           });
 
           * @event cellModified
-          * @param {zebra.data.Matrix} src a matrix that triggers the event
+          * @param {zebkit.data.Matrix} src a matrix that triggers the event
           * @param {Integer}  row an updated row
           * @param {Integer}  col an updated column
           * @param {Object}  old a previous cell value
@@ -873,7 +953,7 @@ pkg.Matrix = Class([
            });
 
            * @event matrixSorted
-           * @param {zebra.data.Matrix} src a matrix that triggers the event
+           * @param {zebkit.data.Matrix} src a matrix that triggers the event
            * @param {Object}  sortInfo a new data order info. The information
            * contains:
            *
@@ -893,10 +973,25 @@ pkg.Matrix = Class([
          * @return {Object}  matrix model cell value
          */
         this.get = function (row,col){
-            if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) {
-                throw new Error("Row or col is out of bounds: " + row + "," + col);
+            if (row < 0 || row >= this.rows) {
+                throw new RangeError(row);
             }
+
+            if (col < 0 || col >= this.cols) {
+                throw new RangeError(col);
+            }
+
             return this.objs[row] == null ? undefined : this.objs[row][col];
+        };
+
+        /**
+         * Get a matrix model cell value by the specified index
+         * @method geti
+         * @param  {Integer} index a cell index
+         * @return {Object}  matrix model cell value
+         */
+        this.geti = function(i) {
+            return this.get(~~(i / this.cols), i % this.cols);
         };
 
         /**
@@ -920,7 +1015,6 @@ pkg.Matrix = Class([
 
                 // allocate array if no data for the given row exists
                 if (this.objs[row] == null) this.objs[row] = [];
-
                 this.objs[row][col] = obj;
                 this._.cellModified(this, row, col, old);
             }
@@ -1004,7 +1098,7 @@ pkg.Matrix = Class([
             }
 
             if (begrow < 0 || begrow + count > this.rows) {
-                throw new Error("Invalid row " + begrow);
+                throw new RangeError(begrow);
             }
 
             this.objs.splice(begrow, count);
@@ -1025,7 +1119,7 @@ pkg.Matrix = Class([
             }
 
             if (begcol < 0 || begcol + count > this.cols) {
-                throw new Error("Invalid column : " + begcol);
+                throw new RangeError(begcol);
             }
 
             for(var i = 0; i < this.objs.length; i++) {
@@ -1110,7 +1204,7 @@ pkg.Matrix = Class([
 
             this._.matrixSorted(this, { col : col,
                                         func: f,
-                                        name: zebra.$FN(f).toLowerCase() });
+                                        name: zebkit.$FN(f).toLowerCase() });
         };
 
         this[''] = function() {
@@ -1128,13 +1222,12 @@ pkg.Matrix = Class([
              * @readOnly
              */
 
-            this._ = new pkg.MatrixListeners();
-            if (arguments.length == 1) {
+            this._ = new this.clazz.Listeners();
+            if (arguments.length === 1) {
                 this.objs = arguments[0];
                 this.cols = (this.objs.length > 0) ? this.objs[0].length : 0;
                 this.rows = this.objs.length;
-            }
-            else {
+            } else {
                 this.objs = [];
                 this.rows = this.cols = 0;
                 if (arguments.length > 1) {
@@ -1149,4 +1242,4 @@ pkg.Matrix = Class([
  * @for
  */
 
-})(zebra("data"), zebra.Class, zebra.Interface);
+})(zebkit("data"), zebkit.Class);

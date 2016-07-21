@@ -6,19 +6,19 @@
 		<meta name="msapplication-tap-highlight" content="no" />
 
 
-		<script src='../zebra.js' type='text/javascript'></script>
+		<script src='../zebkit.js' type='text/javascript'></script>
 
 
 		<script type='text/javascript'>
-		    zebra.ready(function() {
-                eval(zebra.Import("ui", "layout"));
+		    zebkit.ready(function() {
+                eval(zebkit.Import("ui", "layout"));
 
                 var z = new zCanvas(400,400), root = z.root;
                 z.root.setBorder("plain");
-                if (zebra.isTouchable) z.fullScreen();
+                if (window.screen.width < 900) z.fullSize();
                 root.setLayout(new BorderLayout());
 
-                root.add(CENTER, new Panel([
+                root.add("center", new Panel([
                     function() {
                         this.$super(new FlowLayout("center", "center"));
                         var p = new Panel(new StackLayout());
@@ -28,12 +28,12 @@
                         this.add(p);
                     },
 
-                    function mouseDragStarted(e) {
+                    function pointerDragStarted(e) {
                     	if (!this.pathes) this.pathes = {};
                     	this.pathes[e.identifier] = [ e.x, e.y ];
                     },
 
-                    function mouseDragged(e) {
+                    function pointerDragged(e) {
                     	this.pathes[e.identifier].push(e.x, e.y);
                         this.repaint();
                     },

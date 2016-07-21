@@ -1,7 +1,7 @@
-zebra.package("ui.demo", function(pkg, Class) {
+zebkit.package("ui.demo", function(pkg, Class) {
 
-eval(zebra.Import("ui", "layout"));
-var rgb = zebra.util.rgb, ui = zebra.ui;
+eval(zebkit.Import("ui", "layout"));
+var rgb = zebkit.util.rgb, ui = zebkit.ui;
 
 function createColorPicker() {
     var m = new Menu(), i = 0;
@@ -21,17 +21,17 @@ function createColorPicker() {
 }
 
 function formMenuArray() {
-    var mbar = {"@(zebra.ui.demo.butterfly) Cars":
+    var mbar = {"@(zebkit.ui.demo.butterfly) Cars":
                     {
-                     "@(zebra.ui.demo.ind1) I prefer bike": null,
-                     "@(zebra.ui.demo.ind2) Car options":
+                     "@(zebkit.ui.demo.ind1) I prefer bike": null,
+                     "@(zebkit.ui.demo.ind2) Car options":
                         ["[x]Climate control", "[]Start and stop", "-", "[x]Winter tyre"]
                     },
                 "Car color": createColorPicker(),
                 "Car brand":
-                    [ new ImagePan(zebra.ui.demo.bmw).properties({ padding: 8}),
-                      new ImagePan(zebra.ui.demo.saab).properties({ padding: 8}),
-                      new ImagePan(zebra.ui.demo.alpha).properties({ padding: 8}) ]
+                    [ new ImagePan(zebkit.ui.demo.bmw).properties({ padding: 8}),
+                      new ImagePan(zebkit.ui.demo.saab).properties({ padding: 8}),
+                      new ImagePan(zebkit.ui.demo.alpha).properties({ padding: 8}) ]
                 };
     return mbar;
 }
@@ -47,7 +47,7 @@ function $get(i, o) {
 
 
 function createToolbar() {
-    var t = new zebra.ui.Toolbar();
+    var t = new zebkit.ui.Toolbar();
 
     var img = ui.demo.home;
     var imgPan1 = t.addImage(img);
@@ -58,22 +58,22 @@ function createToolbar() {
     var s = t.addSwitcher("ON/OFF");
     t.addLine();
 
-    var g = new zebra.ui.Group();
+    var g = new zebkit.ui.Group();
     var c1 = t.addRadio(g,"Radio 1");
     var c2 = t.addRadio(g,"Radio 2");
     var c3 = t.addRadio(g,"Radio 3");
 
 
     t.bind(function(src) {
-        console.log("::: " + src.$clazz.$name + ", src = " + (imgPan1 == src));
+        console.log("::: " + src.clazz.$name + ", src = " + (imgPan1 == src));
     });
 
 
-    // var m = new zebra.data.ListModel();
+    // var m = new zebkit.data.ListModel();
     // m.addElement("Item 1");
     // m.addElement("Item 2");
     // m.addElement("Item 3");
-    // t.addComboElement(new zebra.ui.List(m));
+    // t.addComboElement(new zebkit.ui.List(m));
 
     return t;
 }
@@ -84,7 +84,7 @@ pkg.PopupDemo = new Class(pkg.DemoPan, [
         this.setLayout(new BorderLayout(8,8));
         this.setPadding(8);
 
-        var mbar = new Panel(new FlowLayout(CENTER, TOP, HORIZONTAL, 8));
+        var mbar = new Panel(new FlowLayout("center", "top", "horizontal", 8));
         var c    = new Panel(new BorderLayout());
         var ctr  = new Constraints();
 
@@ -92,7 +92,7 @@ pkg.PopupDemo = new Class(pkg.DemoPan, [
         c.setPreferredSize(290, 160);
         var mb = new Menubar(formMenuArray());
         mb.setBorder(new Border("lightGray"));
-        c.add(TOP, mb);
+        c.add("top", mb);
 
 
         var bp = new BorderPan("Top menu bar", c);
@@ -106,20 +106,20 @@ pkg.PopupDemo = new Class(pkg.DemoPan, [
         mb = new Menubar(formMenuArray());
         mb.setBorder(new Border("lightGray"));
 
-        c.add(BOTTOM, mb);
+        c.add("bottom", mb);
 
         c = new BorderPan("Bottom menu bar", c);
         c.setGaps(8,8);
         mbar.add(ctr, c);
-        this.add(CENTER, mbar);
+        this.add("center", mbar);
 
 
         var t = createToolbar();
         t = new BorderPan("Horizontal toolbar", t);
         t.setGaps(8,8);
-        this.add(TOP, t);
+        this.add("top", t);
 
-        var p  = new Panel(new FlowLayout(CENTER, CENTER, HORIZONTAL, 8));
+        var p  = new Panel(new FlowLayout("center", "center", "horizontal", 8));
         var l1 = pkg.createLabel("Press right mouse\nbutton to see\ncontext menu Cars", rgb.black);
         var l2 = pkg.createLabel("Press right mouse\nbutton to see\ncontext menu Colors", "003366");
         var l3 = pkg.createLabel("Press right mouse\nbutton to see\ncontext menu Brands", "99CC99");
@@ -140,7 +140,7 @@ pkg.PopupDemo = new Class(pkg.DemoPan, [
         var m1 = new Menu($get(0, formMenuArray()));
         var m2 = createColorPicker();
         var m3 = new Menu($get(2, formMenuArray()));
-        this.add(BOTTOM, new BorderPan("Context menu", p));
+        this.add("bottom", new BorderPan("Context menu", p));
 
         l1.popup = m1;
         l2.popup = m2;

@@ -1,4 +1,11 @@
 (function(pkg, Class) {
+    if (typeof console === "undefined" ) {
+        console = {
+            log  : function() {
+                return print.apply(this, arguments);
+            }
+        };
+    }
 
     pkg.Output = Class([
         function $prototype() {
@@ -28,7 +35,7 @@
                 if (o === null) return "<null>";
                 if (typeof o === "undefined") return "<undefined>";
                 if (pkg.isString(o) || pkg.isNumber(o) || pkg.isBoolean(o)) return o;
-                var d = [o.toString() + " " + (o.$clazz ? o.$clazz.$name:"") , "{"];
+                var d = [o.toString() + " " + (o.clazz ? o.clazz.$name:"") , "{"];
                 for(var k in o) if (o.hasOwnProperty(k)) d.push("    " + k + " = " + o[k]);
                 return d.join('\n') + "\n}";
             };
@@ -36,10 +43,10 @@
     ]);
 
     pkg.HtmlOutput = Class(pkg.Output, [
-        function() { this.$this(null); },
-
         function(element) {
-            element = element || "zebra.out";
+            if (arguments.length === 0) element = null;
+
+            element = element || "zebkit.out";
             if (pkg.isString(element)) {
                 this.el = document.getElementById(element);
                 if (this.el == null) {
@@ -62,14 +69,14 @@
         function warn(s)  { this.out('orange', s); },
 
         function out(color, msg) {
-            var t = ["<div class='zebra.out.print' style='color:", color, "'>", this.format(msg), "</div>" ];
+            var t = ["<div class='zebkit.out.print' style='color:", color, "'>", this.format(msg), "</div>" ];
             this.el.innerHTML += t.join('');
         }
     ]);
 
     pkg.RemoteOutput = Class(pkg.Output, [
         function(url) {
-            this.http   = new zebra.io.HTTP(url);
+            this.http   = new zebkit.io.HTTP(url);
             this.apikey = "19751975";
             this.buffer = [];
             this.$justSaved = false;
@@ -194,19 +201,19 @@
 
     pkg.assertFDefined = function(o, f, lab) {
         var b = typeof o[f] !== "undefined" && typeof o[f] === "function";
-        if (!b && zebra.isIE) b = !!o[f] && typeof o[f].toString==="undefined" && /^\s*\bfunction\b/.test(o[f]);
+        if (!b && zebkit.isIE) b = !!o[f] && typeof o[f].toString==="undefined" && /^\s*\bfunction\b/.test(o[f]);
         pkg.assert(b, true, lab, "AssertFunctionDefined");
     };
 
     pkg.assertObjEqual = function(obj1, obj2, lab) {
-        function cmp(obj1, obj2) {
+        function cmp(obj1, obj2, path) {
             function isNumeric(n) {
               return !isNaN(parseFloat(n)) && isFinite(n);
             }
 
             if (obj1 === obj2) return true;
 
-            if (obj1 === null || obj2 === null) {
+            if (obj1 == null || obj2 == null) {
                 throw new AssertionError("One of the compared object is null");
             }
 
@@ -216,26 +223,28 @@
                 }
 
                 for(var i=0; i < obj1.length; i++) {
-                    cmp(obj1[i], obj2[i]);
+                    if (!cmp(obj1[i], obj2[i], path)) return false;
                 }
                 return true;
             }
 
-            if (zebra.isString(obj1) || isNumeric(obj1) || typeof obj1 === 'boolean') {
+            if (zebkit.isString(obj1) || isNumeric(obj1) || typeof obj1 === 'boolean') {
                 if (obj1 !== obj2) throw new AssertionError("Objects values '" + obj1 + "' !== '" + obj2 );
                 return true;
             }
 
             for(var k in obj1) {
+                var pp =  path == "" ? k : path + "." + k;
+
                 if (typeof obj2[k] === "undefined") {
-                    throw new AssertionError("Object field '"  + k + "' is undefined" );
+                    throw new AssertionError("Object field '"  + pp + "' is undefined" );
                 }
-                cmp(obj1[k], obj2[k]);
+                if (!cmp(obj1[k], obj2[k], pp)) return false;
             }
             return true;
         }
 
-        pkg.assert(cmp(obj1, obj2), true, lab, "AssertObjectEqual");
+        pkg.assert(cmp(obj1, obj2, "") && cmp(obj2, obj1, ""), true, lab, "AssertObjectEqual");
     };
 
     pkg.assert = function(c, er, lab, assertLab) {
@@ -250,12 +259,12 @@
     pkg.assertException = function(f, et, lab) {
         if (!(f instanceof Function)) throw new WrongArgument("Function as input is expected");
 
-        if (zebra.isString(et)) lab = et;
-        if (arguments.length < 2 || zebra.isString(et)) et = Error;
+        if (zebkit.isString(et)) lab = et;
+        if (arguments.length < 2 || zebkit.isString(et)) et = Error;
 
         try { f(); }
         catch(e) {
-            if ((e.instanceOf && e.instanceOf(et)) || (e instanceof et)) return;
+            if (e instanceof et) return;
             throw e;
         }
         throw new AssertionError((lab ? "'" + lab + "'":"") + " in\n" + f + "\n" + "method. '" + et.name + "' exception is expected");
@@ -276,7 +285,7 @@
     pkg.obj2str = function(v, shift) {
         if (typeof shift === "undefined") shift = "";
 
-        if (v == null || zebra.isNumber(v) || zebra.isBoolean(v) || zebra.isString(v)) {
+        if (v == null || zebkit.isNumber(v) || zebkit.isBoolean(v) || zebkit.isString(v)) {
             return v;
         }
 
@@ -292,7 +301,9 @@
 
         var s = [shift, "{"];
         for(var k in v) {
-            s.push("\n  " + shift + k + " = " + pkg.obj2str(v[k], shift + "  "));
+            if (v.hasOwnProperty(k) && k[0] != '$') {
+                s.push("\n  " + shift + k + " = " + pkg.obj2str(v[k], shift + "  "));
+            }
         }
         s.push("\n", shift, "}");
         return s.join('');
@@ -305,7 +316,7 @@
         }
 
         var args = Array.prototype.slice.call(arguments);
-        if (args.length > 0 && zebra.isString(args[0])) {
+        if (args.length > 0 && zebkit.isString(args[0])) {
             title = args.shift();
         }
 
@@ -319,11 +330,18 @@
 
         out.print("Running " + args.length + " test cases "  + (title !== null? "from '" + title + "' test suite" : "") + " :");
         out.print("==============================================");
-        if (typeof zebra.util.Runner !== "undefined" && pkg.$useSyncTest != true) {
-            var runner = new zebra.util.Runner();
+        if (typeof zebkit.util.Runner !== "undefined" && pkg.$useSyncTest != true) {
+            var runner = new zebkit.util.Runner();
 
             for(var i = 0; i < args.length; i++) {
                 var f = args[i], k = pkg.$FN(f);
+
+                // if some of usea cases already genereated error
+                // we should not start new test cases since it
+                // will override faieled test case name
+                if (runner.$error != null) {
+                    break;
+                }
 
                 if (k.indexOf("_") === 0) {
                     out.warn("? " + k + " (remove leading '_' to enable '" + k + "' test case)");
@@ -333,6 +351,9 @@
                     (function(f, k) {
                         runner.$currentTestCase = k;
 
+                        // put call back function in context of runner
+                        // async test cases has to perfrom testing
+                        // with the function
                         runner.assertCallback = function(f) {
                             var notify = this.join(), $this = this;
                             return function() {
@@ -462,4 +483,4 @@
         clazz.prototype[methodName].$watched = m;
     };
 
-})(zebra, zebra.Class);
+})(zebkit, zebkit.Class);

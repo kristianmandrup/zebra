@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 	<head>
-	    <script src='../zebra.min.js' type='text/javascript'></script>
-        
+	    <script src='../zebkit.js' type='text/javascript'></script>
+
 		<script type='text/javascript'>
-		    
-		    zebra.ready(
+
+		    zebkit.ready(
 		    	function() {
-				    eval(zebra.Import("ui", "layout"));
+				    eval(zebkit.Import("ui", "layout"));
 
                     var canvas = new zCanvas("pullout", 400, 400), root = canvas.root;
 
@@ -18,7 +18,7 @@
 
                     root.setLayout(new Layout([
                         function calcPreferredSize(t) {
-                            return { width: 0, height:0 }; // just a stub                             
+                            return { width: 0, height:0 }; // just a stub
                         },
 
                         function doLayout(t) {
@@ -26,7 +26,7 @@
                                 var kid = t.kids[i];
                                 if (kid.isVisible === true) {
                                     var ctr = kid.constraints;
-                                    if (ctr.alignment == LEFT) {
+                                    if (ctr.alignment === "left") {
                                         var ps = kid.getPreferredSize();
                                         ps.height = ~~((t.height*ctr.percentage)/100);
                                         kid.setSize(ps.width, ps.height);
@@ -45,7 +45,7 @@
                             this.timer = null;
                         },
 
-                        function mouseClicked(e) {
+                        function pointerClicked(e) {
                             if (this.timer == null) {
                                 if (this.state == "hiding") {
                                     this.state = "shown";
@@ -71,21 +71,21 @@
                                 }
                             }
                         }
-                    ]); 
+                    ]);
 
                     p.setPreferredSize(130, -1);
                     p.setBorder("plain");
                     p.cursorType = Cursor.HAND;
                     p.setBackground("orange");
                     p.setPadding(6);
-                    p.setLayout(new FlowLayout(CENTER, CENTER, VERTICAL, 8));
+                    p.setLayout(new FlowLayout("center", "center", "vertical", 8));
                     p.add(new Button("Button 1"));
                     p.add(new Button("Button 2"));
                     p.add(new Button("Button 3"));
 
                     root.setBorder("plain");
-                    root.add(new Constr(LEFT, 70), p);
-			 		//canvas.fullScreen();
+                    root.add(new Constr("left", 70), p);
+			 		//canvas.fullSize();
 		 		});
 		</script>
 	</head>

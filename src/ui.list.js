@@ -1,38 +1,40 @@
-(function(pkg, Class) {
+zebkit.package("ui", function(pkg, Class) {
 
 /**
  * @module ui
 */
 
-var L = zebra.layout, Position = zebra.util.Position, KE = pkg.KeyEvent;
-
 /**
  * Base UI list component class that has to be extended with a
  * concrete list component implementation. The list component
- * visualizes list data model (zebra.data.ListModel).
- * @class  zebra.ui.BaseList
- * @extends {zebra.ui.Panel}
+ * visualizes list data model (zebkit.data.ListModel).
+ * @class  zebkit.ui.BaseList
+ * @extends {zebkit.ui.Panel}
  */
 
 /**
  * Fire when a list item has been selected:
 
-        list.bind(function (src, prev) {
+        list.bind(function selected(src, prev) {
             ...
         });
 
  * @event selected
- * @param {zebra.ui.BaseList} src a list that triggers the event
+ * @param {zebkit.ui.BaseList} src a list that triggers the event
  * @param {Integer|Object} prev a previous selected index, return null if the selected item has been re-selected
  */
-pkg.BaseList = Class(pkg.Panel, Position.Metric, [
+pkg.BaseList = Class(pkg.Panel, zebkit.util.Position.Metric, pkg.$ViewsSetterMix, [
+    function $clazz() {
+        this.Listeners = zebkit.util.ListenersClass("selected");
+    },
+
     function $prototype() {
         this.canHaveFocus = true;
 
         /**
          * List model the component visualizes
          * @attribute model
-         * @type {zebra.data.ListModel}
+         * @type {zebkit.data.ListModel}
          * @readOnly
          */
 
@@ -46,11 +48,10 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
         this.setValue = function(v) {
             if (v == null) {
                 this.select(-1);
-            }
-            else {
+            } else {
                 if (this.model != null) {
                     for(var i = 0; i < this.model.count(); i++) {
-                        if (this.model.get(i) == v && this.isItemSelectable(i)) {
+                        if (this.model.get(i) === v && this.isItemSelectable(i)) {
                             this.select(i);
                             return i;
                         }
@@ -91,12 +92,12 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
 
         this.lookupItem = function(ch){
             var count = this.model == null ? 0 : this.model.count();
-            if (zebra.util.isLetter(ch) && count > 0){
+            if (zebkit.util.isLetter(ch) && count > 0){
                 var index = this.selectedIndex < 0 ? 0 : this.selectedIndex + 1;
                 ch = ch.toLowerCase();
                 for(var i = 0;i < count - 1; i++){
                     var idx = (index + i) % count, item = this.model.get(idx).toString();
-                    if (this.isItemSelectable(idx) && item.length > 0 && item[0].toLowerCase() == ch) {
+                    if (this.isItemSelectable(idx) && item.length > 0 && item[0].toLowerCase() === ch) {
                         return idx;
                     }
                 }
@@ -111,19 +112,19 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
          * @method isSelected
          */
         this.isSelected = function(i) {
-            return i == this.selectedIndex;
+            return i === this.selectedIndex;
         };
 
         /**
-         * Called when a pointer (mouse or finger on touch screen) is moved
+         * Called when a pointer (pointer or finger on touch screen) is moved
          * to a new location
          * @param  {Integer} x a pointer x coordinate
          * @param  {Integer} y a pointer y coordinate
-         * @method pointerMoved
+         * @method $pointerMoved
          * @protected
          */
-        this.pointerMoved = function(x,y){
-            if (this.isComboMode && this.model != null) {
+        this.$pointerMoved = function(x, y){
+            if (this.isComboMode === true && this.model != null) {
                 var index = this.getItemIdxAt(x, y);
                 if (index != this.position.offset && (index < 0 || this.isItemSelectable(index) === true)) {
                     this.$triggeredByPointer = true;
@@ -294,8 +295,12 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
          * @method select
          */
         this.select = function(index){
+            if (index == null) {
+                throw new Error("Null index");
+            }
+
             if (this.model != null && index >= this.model.count()){
-                throw new Error("index=" + index + ",max=" + this.model.count());
+                throw new RangeError(index);
             }
 
             if (this.selectedIndex != index) {
@@ -306,8 +311,7 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
                     this.repaintByOffsets(prev, this.selectedIndex);
                     this.fireSelected(prev);
                 }
-            }
-            else {
+            } else {
                 this.fireSelected(null);
             }
         };
@@ -320,43 +324,43 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
          * @protected
          */
         this.fireSelected = function(prev) {
-            this._.fired(this, prev);
+            this._.selected(this, prev);
         };
 
-        this.mouseClicked = function(e) {
-            if (this.model != null && e.isActionMask() && this.model.count() > 0) {
+        this.pointerClicked = function(e) {
+            if (this.model != null && e.isAction() && this.model.count() > 0) {
                 this.$select(this.position.offset < 0 ? 0 : this.position.offset);
             }
         };
 
-        this.mouseReleased = function(e){
+        this.pointerReleased = function(e){
             if (this.model != null     &&
                 this.model.count() > 0 &&
-                e.isActionMask()       &&
+                e.isAction()           &&
                 this.position.offset != this.selectedIndex)
             {
                 this.position.setOffset(this.selectedIndex);
             }
         };
 
-        this.mousePressed = function(e){
-            if (e.isActionMask() && this.model != null && this.model.count() > 0) {
+        this.pointerPressed = function(e){
+            if (e.isAction() && this.model != null && this.model.count() > 0) {
                 var index = this.getItemIdxAt(e.x, e.y);
-                if (index >= 0 && this.position.offset != index) {
+                if (index >= 0 && this.position.offset != index && this.isItemSelectable(index)) {
                     this.position.setOffset(index);
                 }
             }
         };
 
-        this.mouseDragged = this.mouseMoved = this.mouseEntered = function(e){
-            this.pointerMoved(e.x, e.y);
+        this.pointerDragged = this.pointerMoved = this.pointerEntered = function(e){
+            this.$pointerMoved(e.x, e.y);
         };
 
-        this.mouseExited  = function(e){
-            this.pointerMoved(-10, -10);
+        this.pointerExited  = function(e){
+            this.$pointerMoved(-10, -10);
         };
 
-        this.mouseDragEnded = function(e){
+        this.pointerDragEnded = function(e){
             if (this.model != null && this.model.count() > 0 && this.position.offset >= 0) {
                 this.select(this.position.offset < 0 ? 0 : this.position.offset);
             }
@@ -366,33 +370,32 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
             if (this.model != null && this.model.count() > 0){
                 var po = this.position.offset;
                 switch(e.code) {
-                    case KE.END:
-                        if (e.isControlPressed()) {
+                    case pkg.KeyEvent.END:
+                        if (e.ctrlKey) {
                             this.position.setOffset(this.position.metrics.getMaxOffset());
-                        }
-                        else {
-                            this.position.seekLineTo(Position.END);
+                        } else {
+                            this.position.seekLineTo("end");
                         }
                         break;
-                    case KE.HOME:
-                        if (e.isControlPressed()) this.position.setOffset(0);
-                        else this.position.seekLineTo(Position.BEG);
+                    case pkg.KeyEvent.HOME:
+                        if (e.ctrlKey) this.position.setOffset(0);
+                        else this.position.seekLineTo("begin");
                         break;
-                    case KE.RIGHT    : this.position.seek(1); break;
-                    case KE.DOWN     : this.position.seekLineTo(Position.DOWN); break;
-                    case KE.LEFT     : this.position.seek(-1);break;
-                    case KE.UP       : this.position.seekLineTo(Position.UP);break;
-                    case KE.PAGEUP   : this.position.seek(this.pageSize(-1));break;
-                    case KE.PAGEDOWN : this.position.seek(this.pageSize(1));break;
-                    case KE.SPACE    :
-                    case KE.ENTER    : this.$select(this.position.offset); break;
+                    case pkg.KeyEvent.RIGHT    : this.position.seek(1); break;
+                    case pkg.KeyEvent.DOWN     : this.position.seekLineTo("down"); break;
+                    case pkg.KeyEvent.LEFT     : this.position.seek(-1);break;
+                    case pkg.KeyEvent.UP       : this.position.seekLineTo("up");break;
+                    case pkg.KeyEvent.PAGEUP   : this.position.seek(this.pageSize(-1));break;
+                    case pkg.KeyEvent.PAGEDOWN : this.position.seek(this.pageSize(1));break;
+                    case pkg.KeyEvent.SPACE    :
+                    case pkg.KeyEvent.ENTER    : this.$select(this.position.offset); break;
                 }
             }
         };
 
         /**
          * Select the given list item. The method is called when an item
-         * selection is triggered by a user interaction: key board, or mouse
+         * selection is triggered by a user interaction: key board, or pointer
          * @param  {Integer} o an item index
          * @method $select
          * @protected
@@ -403,7 +406,7 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
 
         /**
          * Define key typed events handler
-         * @param  {zebra.ui.KeyEvent} e a key event
+         * @param  {zebkit.ui.KeyEvent} e a key event
          * @method keyTyped
          */
         this.keyTyped = function (e){
@@ -424,8 +427,7 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
             this.invalidate();
             if (this.selectedIndex == index || this.model.count() === 0) {
                 this.select(-1);
-            }
-            else {
+            } else {
                 if (this.selectedIndex > index) {
                     this.selectedIndex--;
                 }
@@ -471,28 +473,27 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
                 }
             }
 
-            if (this.isComboMode) {
+            if (this.isComboMode === true) {
                 this.notifyScrollMan(off);
-            }
-            else {
+            } else {
                 this.select(off);
             }
 
-          //  this.notifyScrollMan(off);
+            // this.notifyScrollMan(off);
             this.repaintByOffsets(prevOffset, off);
         };
 
 
         /**
          * Set the list model to be rendered with the list component
-         * @param {zebra.data.ListModel} m a list model
+         * @param {zebkit.data.ListModel} m a list model
          * @method setModel
          * @chainable
          */
         this.setModel = function (m){
             if (m != this.model){
                 if (m != null && Array.isArray(m)) {
-                    m = new zebra.data.ListModel(m);
+                    m = new zebkit.data.ListModel(m);
                 }
 
                 if (this.model != null && this.model._ != null) this.model.unbind(this);
@@ -506,7 +507,7 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
         /**
          * Set the given position controller. List component uses position to
          * track virtual cursor.
-         * @param {zebra.util.Position} c a position
+         * @param {zebkit.util.Position} c a position
          * @method setPosition
          */
         this.setPosition = function(c){
@@ -532,7 +533,7 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
         this.setViewProvider = function (v){
             if (this.provider != v){
                 if (typeof v  == "function") {
-                    var o = new zebra.Dummy();
+                    var o = new zebkit.Dummy();
                     o.getView = v;
                     v = o;
                 }
@@ -579,7 +580,16 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
         };
     },
 
-    function (m, b){
+    function (m, b) {
+        if (b == null) b = false;
+        if (m == null) m = [];
+        else {
+            if (zebkit.isBoolean(m)) {
+                b = m;
+                m = [];
+            }
+        }
+
         /**
          * Currently selected list item index
          * @type {Integer}
@@ -589,7 +599,7 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
          */
         this.selectedIndex = -1;
 
-        this._ = new zebra.util.Listeners();
+        this._ = new this.clazz.Listeners();
 
         /**
          * Indicate the current mode the list items selection has to work
@@ -605,14 +615,14 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
          * @attribute scrollManager
          * @readOnly
          * @protected
-         * @type {zebra.ui.ScrollManager}
+         * @type {zebkit.ui.ScrollManager}
          */
         this.scrollManager = new pkg.ScrollManager(this);
 
         this.$super();
 
         // position manager should be set before model initialization
-        this.setPosition(new Position(this));
+        this.setPosition(new zebkit.util.Position(this));
 
         /**
          * List model
@@ -621,7 +631,6 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
          */
         this.setModel(m);
     },
-
 
     /**
      * Sets the views for the list visual elements. The following elements are
@@ -635,23 +644,21 @@ pkg.BaseList = Class(pkg.Panel, Position.Metric, [
      * @method setViews
      */
 
-
     function focused(){
         this.$super();
         this.repaint();
     }
 ]);
-pkg.BaseList.prototype.setViews = pkg.$ViewsSetter;
 
 /**
- * The class is list component implementation that visualizes zebra.data.ListModel.
+ * The class is list component implementation that visualizes zebkit.data.ListModel.
  * It is supposed the model can have any type of items. Visualization of the items
  * is customized by defining a view provider.
  *
  * The general use case:
 
         // create list component that contains three item
-        var list = new zebra.ui.List([
+        var list = new zebkit.ui.List([
             "Item 1",
             "Item 2",
             "Item 3"
@@ -671,7 +678,7 @@ pkg.BaseList.prototype.setViews = pkg.$ViewsSetter;
         // suppose every model item is an array that contains two elements,
         // first element points to the item icon and the second element defines
         // the list item text
-        var list = new zebra.ui.List([
+        var list = new zebkit.ui.List([
             [ "icon1.gif", "Caption 1" ],
             [ "icon2.gif", "Caption 1" ],
             [ "icon3.gif", "Caption 1" ]
@@ -679,31 +686,31 @@ pkg.BaseList.prototype.setViews = pkg.$ViewsSetter;
 
         // define new list item views provider that represents every
         // list model item as icon with a caption
-        list.setViewProvider(new zebra.ui.List.ViewProvider([
+        list.setViewProvider(new zebkit.ui.List.ViewProvider([
             function getView(target, value, i) {
                 var caption = value[1];
                 var icon    = value[0];
-                return new zebra.ui.CompRender(new zebra.ui.ImageLabel(caption, icon));
+                return new zebkit.ui.CompRender(new zebkit.ui.ImageLabel(caption, icon));
             }
         ]));
 
- * @class  zebra.ui.List
- * @extends zebra.ui.BaseList
+ * @class  zebkit.ui.List
+ * @extends zebkit.ui.BaseList
  * @constructor
- * @param {zebra.data.ListModel|Array} [model] a list model that should be passed as an instance
- * of zebra.data.ListModel or as an array.
+ * @param {zebkit.data.ListModel|Array} [model] a list model that should be passed as an instance
+ * of zebkit.data.ListModel or as an array.
  * @param {Boolean} [isComboMode] true if the list navigation has to be triggered by
- * mouse cursor moving
+ * pointer cursor moving
  */
 pkg.List = Class(pkg.BaseList, [
     function $clazz() {
         /**
          * List view provider class. This implementation renders list item using string
-         * render. If a list item is an instance of "zebra.ui.View" class than it will
+         * render. If a list item is an instance of "zebkit.ui.View" class than it will
          * be rendered as the view.
-         * @class zebra.ui.List.ViewProvider
+         * @class zebkit.ui.List.ViewProvider
          * @constructor
-         * @param {String|zebra.ui.Font} [f] a font to render list item text
+         * @param {String|zebkit.ui.Font} [f] a font to render list item text
          * @param {String} [c] a color to render list item text
          */
         this.ViewProvider = Class([
@@ -711,13 +718,13 @@ pkg.List = Class(pkg.BaseList, [
                 this[''] = function(f, c) {
                     /**
                      * Reference to text render that is used to paint a list items
-                     * @type {zebra.ui.StringRender}
+                     * @type {zebkit.ui.StringRender}
                      * @attribute text
                      * @readOnly
                      */
 
                     this.text = new pkg.StringRender("");
-                    zebra.properties(this, this.$clazz);
+                    zebkit.properties(this, this.clazz);
                     if (f != null) this.text.setFont(f);
                     if (c != null) this.text.setColor(c);
                 };
@@ -734,10 +741,10 @@ pkg.List = Class(pkg.BaseList, [
                 /**
                  * Get a view for the given model data element of the
                  * specified list component
-                 * @param  {zebra.ui.List} target a list component
+                 * @param  {zebkit.ui.List} target a list component
                  * @param  {Object} value  a data model value
                  * @param  {Integer} i  an item index
-                 * @return {zebra.ui.View}  a view to be used to render
+                 * @return {zebkit.ui.View}  a view to be used to render
                  * the given list component item
                  * @method getView
                  */
@@ -750,7 +757,7 @@ pkg.List = Class(pkg.BaseList, [
         ]);
 
         /**
-         * @for zebra.ui.List
+         * @for zebkit.ui.List
          */
     },
 
@@ -825,7 +832,7 @@ pkg.List = Class(pkg.BaseList, [
                 }
 
                 if (this.widths  == null || this.widths.length  != count) {
-                    this.widths  = Array(count);
+                    this.widths = Array(count);
                 }
 
                 var provider = this.provider;
@@ -872,8 +879,7 @@ pkg.List = Class(pkg.BaseList, [
                         this.firstVisible--;
                         this.firstVisibleY -= this.heights[this.firstVisible];
                     }
-                }
-                else {
+                } else {
                     this.firstVisible  = 0;
                     this.firstVisibleY = top;
                 }
@@ -932,15 +938,6 @@ pkg.List = Class(pkg.BaseList, [
         };
     },
 
-    function() {
-        this.$this(false);
-    },
-
-    function (m) {
-        if (zebra.isBoolean(m)) this.$this([], m);
-        else this.$this(m, false);
-    },
-
     function (m, b){
         /**
          * Index of the first visible list item
@@ -969,7 +966,7 @@ pkg.List = Class(pkg.BaseList, [
          * @private
          */
         this.visValid = false;
-        this.setViewProvider(new this.$clazz.ViewProvider());
+        this.setViewProvider(new this.clazz.ViewProvider());
         this.$super(m, b);
     },
 
@@ -997,50 +994,43 @@ pkg.List = Class(pkg.BaseList, [
  * other UI components as its elements what makes list item view customization very easy and powerful:
 
         // use image label as the component list items
-        var list = new zebra.ui.CompList();
-        list.add(new zebra.ui.ImageLabel("Caption 1", "icon1.gif"));
-        list.add(new zebra.ui.ImageLabel("Caption 2", "icon2.gif"));
-        list.add(new zebra.ui.ImageLabel("Caption 3", "icon3.gif"));
+        var list = new zebkit.ui.CompList();
+        list.add(new zebkit.ui.ImageLabel("Caption 1", "icon1.gif"));
+        list.add(new zebkit.ui.ImageLabel("Caption 2", "icon2.gif"));
+        list.add(new zebkit.ui.ImageLabel("Caption 3", "icon3.gif"));
 
 
- * @class zebra.ui.CompList
- * @extends zebra.ui.BaseList
- * @param {zebra.data.ListModel|Array} [model] a list model that should be passed as an instance
- * of zebra.data.ListModel or as an array.
+ * @class zebkit.ui.CompList
+ * @extends zebkit.ui.BaseList
+ * @param {zebkit.data.ListModel|Array} [model] a list model that should be passed as an instance
+ * of zebkit.data.ListModel or as an array.
  * @param {Boolean} [isComboMode] true if the list navigation has to be triggered by
- * mouse cursor moving
+ * pointer cursor moving
  */
 pkg.CompList = Class(pkg.BaseList, [
     function $clazz() {
         this.Label      = Class(pkg.Label, []);
         this.ImageLabel = Class(pkg.ImageLabel, []);
-        var CompListModelListeners = zebra.util.ListenersClass("elementInserted", "elementRemoved");
-
-        this.CompListModel = Class([
-            function $prototype() {
-                this.get = function (i) { return this.src.kids[i]; };
-
-                this.set = function(item,i){
-                    this.src.removeAt(i);
-                    this.src.insert(i, null, item);
-                };
-
-                this.add       = function(o)       { this.src.add(o); };
-                this.removeAt  = function (i)      { this.src.removeAt(i);};
-                this.insert    = function (item,i) { this.src.insert(i, null, item); };
-                this.count     = function ()       { return this.src.kids.length; };
-                this.removeAll = function ()       { this.src.removeAll(); };
-            },
-
-            function(src) {
-                this.src = src;
-                this._ = new CompListModelListeners();
-            }
-        ]);
+        this.Listeners  = this.$parent.Listeners.ListenersClass("elementInserted", "elementRemoved", "elementSet");
     },
 
     function $prototype() {
-        this.catchScrolled = function(px,py) {};
+        this.get = function(i) {
+            if (i < 0 || i >= this.kids.length) {
+                throw new RangeError(i);
+            }
+            return this.kids[i];
+        };
+
+        this.contains = function (c) {
+            return this.indexOf(c) >= 0;
+        };
+
+        this.count = function () {
+            return this.kids.length;
+        };
+
+        this.catchScrolled = function(px, py) {};
 
         this.getItemLocation = function(i) {
             return { x:this.kids[i].x, y:this.kids[i].y };
@@ -1052,7 +1042,7 @@ pkg.CompList = Class(pkg.BaseList, [
         };
 
         this.recalc = function (){
-            this.max = L.getMaxPreferredSize(this);
+            this.max = zebkit.layout.getMaxPreferredSize(this);
         };
 
         this.calcMaxItemSize = function (){
@@ -1061,7 +1051,7 @@ pkg.CompList = Class(pkg.BaseList, [
         };
 
         this.getItemIdxAt = function(x,y){
-            return L.getDirectAt(x, y, this);
+            return zebkit.layout.getDirectAt(x, y, this);
         };
 
         this.isItemSelectable = function(i) {
@@ -1070,60 +1060,28 @@ pkg.CompList = Class(pkg.BaseList, [
         };
 
         this.catchInput = function (child){
-            if (this.isComboMode) {
-                return true;
-            }
-
-            var p = child;
-            while (p != this) {
-                if (p.stopCatchInput === true) return false;
-                p = p.parent;
+            if (this.isComboMode !== true) {
+                var p = child;
+                while (p != this) {
+                    if (p.stopCatchInput === true) return false;
+                    p = p.parent;
+                }
             }
             return true;
         };
-    },
 
-    function () {
-        this.$this([], false);
-    },
-
-    function (b){
-        if (zebra.isBoolean(b)) {
-            this.$this([], b);
-        }
-        else {
-            this.$this(b, false);
-        }
-    },
-
-    function (d, b){
-        this.max = null;
-        this.setViewProvider(new zebra.Dummy([
-            function getView(target,obj,i) {
-                return new pkg.CompRender(obj);
+        this.setModel = function(m){
+            if (Array.isArray(m)) {
+                for(var i=0; i < m.length; i++) this.add(m[i]);
+            } else {
+                throw new Error("Invalid comp list model");
             }
-        ]));
-        this.$super(d, b);
-    },
-
-    function setModel(m){
-        var a = [];
-        if (Array.isArray(m)) {
-            a = m;
-            m = new this.$clazz.CompListModel(this);
-        }
-
-        if (zebra.instanceOf(m, this.$clazz.CompListModel) === false) {
-            throw new Error("Invalid model");
-        }
-
-        this.$super(m);
-        for(var i=0; i < a.length; i++) this.add(a[i]);
+        };
     },
 
     function setPosition(c){
         if (c != this.position){
-            if (zebra.instanceOf(this.layout, Position.Metric)) {
+            if (zebkit.instanceOf(this.layout, zebkit.util.Position.Metric)) {
                 c.setMetric(this.layout);
             }
             this.$super(c);
@@ -1157,15 +1115,30 @@ pkg.CompList = Class(pkg.BaseList, [
 
             this.$super(this.scrollManager);
             if (this.position != null) {
-                this.position.setMetric(zebra.instanceOf(layout, Position.Metric) ? layout : this);
+                this.position.setMetric(zebkit.instanceOf(layout, zebkit.util.Position.Metric) ? layout : this);
             }
         }
 
         return this;
     },
 
-    function insert(index,constr,e) {
-        return this.$super(index, constr, zebra.isString(e) ? new this.$clazz.Label(e) : e);
+    function setAt(i, item) {
+        if (i < 0 || i >= this.kids.length) {
+            throw new RangeError(i);
+        }
+        return this.$super(i, item);
+    },
+
+    function insert(i, constr, e) {
+        if (arguments.length == 2) {
+            e = constr;
+            constr = null;
+        }
+
+        if (i < 0 || i > this.kids.length) {
+            throw new RangeError(i);
+        }
+        return this.$super(i, constr, zebkit.instanceOf(e, pkg.Panel) ? e : new this.clazz.Label("" + e));
     },
 
     function kidAdded(index,constr,e){
@@ -1176,17 +1149,26 @@ pkg.CompList = Class(pkg.BaseList, [
     function kidRemoved(index,e) {
         this.$super(index,e);
         this.model._.elementRemoved(this, e, index);
+    },
+
+    function (m, b) {
+        this.model = this;
+        this.max   = null;
+        this.setViewProvider(new zebkit.Dummy([
+            function getView(target,obj,i) {
+                return new pkg.CompRender(obj);
+            }
+        ]));
+        this.$super(m, b);
     }
 ]);
-
-var ContentListeners = zebra.util.ListenersClass("contentUpdated");
 
 /**
  * Combo box UI component class. Combo uses a list component to show in drop down window.
  * You can use any available list component implementation:
 
         // use simple list as combo box drop down window
-        var combo = new zebra.ui.Combo(new zebra.ui.List([
+        var combo = new zebkit.ui.Combo(new zebkit.ui.List([
             "Item 1",
             "Item 2",
             "Item 3"
@@ -1194,7 +1176,7 @@ var ContentListeners = zebra.util.ListenersClass("contentUpdated");
 
 
         // use component list as combo box drop down window
-        var combo = new zebra.ui.Combo(new zebra.ui.CompList([
+        var combo = new zebkit.ui.Combo(new zebkit.ui.CompList([
             "Item 1",
             "Item 2",
             "Item 3"
@@ -1202,27 +1184,27 @@ var ContentListeners = zebra.util.ListenersClass("contentUpdated");
 
 
         // let combo box decides which list component has to be used
-        var combo = new zebra.ui.Combo([
+        var combo = new zebkit.ui.Combo([
             "Item 1",
             "Item 2",
             "Item 3"
         ]);
 
- * @class zebra.ui.Combo
- * @extends {zebra.ui.Panel}
+ * @class zebkit.ui.Combo
+ * @extends {zebkit.ui.Panel}
  * @constructor
- * @param {Array|zebra.ui.BaseList} data an combo items array or a list component
+ * @param {Array|zebkit.ui.BaseList} data an combo items array or a list component
  */
 
 /**
  * Fired when a new value in a combo box component has been selected
 
-     combo.bind(function(combo, value) {
+     combo.bind(function selected(combo, value) {
          ...
      });
 
  * @event selected
- * @param {zebra.ui.Combo} combo a combo box component where a new value
+ * @param {zebkit.ui.Combo} combo a combo box component where a new value
  * has been selected
  * @param {Object} value a previously selected index
  */
@@ -1231,20 +1213,22 @@ var ContentListeners = zebra.util.ListenersClass("contentUpdated");
  * Implement the event handler method to detect when a combo pad window
  * is shown or hidden
 
-     var p = new zebra.ui.Combo();
+     var p = new zebkit.ui.Combo();
      p.padShown = function(src, b) { ... }; // add event handler
 
  * @event padShown
- * @param {zebra.ui.Combo} src a combo box component that triggers the event
+ * @param {zebkit.ui.Combo} src a combo box component that triggers the event
  * @param {Boolean} b a flag that indicates if the combo pad window has been
  * shown (true) or hidden (false)
 */
 pkg.Combo = Class(pkg.Panel, [
     function $clazz() {
+        this.Listeners = zebkit.util.ListenersClass("selected");
+
         /**
          * UI panel class that is used to implement combo box content area
-         * @class  zebra.ui.Combo.ContentPan
-         * @extends {zebra.ui.Panel}
+         * @class  zebkit.ui.Combo.ContentPan
+         * @extends {zebkit.ui.Panel}
          */
         this.ContentPan = Class(pkg.Panel, [
             function $prototype() {
@@ -1253,7 +1237,7 @@ pkg.Combo = Class(pkg.Panel, [
                  * value. Implement the method to synchronize content panel with updated combo
                  * box value
                  * @method comboValueUpdated
-                 * @param {zebra.ui.Combo} combo a combo box component that has been updated
+                 * @param {zebkit.ui.Combo} combo a combo box component that has been updated
                  * @param {Object} value a value with which the combo box has been updated
                  */
                 this.comboValueUpdated = function(combo, value) {};
@@ -1271,11 +1255,11 @@ pkg.Combo = Class(pkg.Panel, [
                 /**
                  * Get a combo box the content panel belongs
                  * @method getCombo
-                 * @return {zebra.ui.Combo} a combo the content panel belongs
+                 * @return {zebkit.ui.Combo} a combo the content panel belongs
                  */
                 this.getCombo = function() {
                     var p = this;
-                    while((p = p.parent) && zebra.instanceOf(p, pkg.Combo) == false);
+                    while ((p = p.parent) && zebkit.instanceOf(p, pkg.Combo) === false);
                     return p;
                 };
             }
@@ -1283,23 +1267,26 @@ pkg.Combo = Class(pkg.Panel, [
 
         /**
          * Combo box list pad component class
-         * @extends zebra.ui.ScrollPan
-         * @class  zebra.ui.Combo.ComboPadPan
+         * @extends zebkit.ui.ScrollPan
+         * @class  zebkit.ui.Combo.ComboPadPan
          */
         this.ComboPadPan = Class(pkg.ScrollPan, [
             function $prototype() {
                 this.$closeTime = 0;
 
+                this.adjustToComboSize = true;
+
                 /**
                  * A reference to combo that uses the list pad component
                  * @attribute owner
-                 * @type {zebra.ui.Combo}
+                 * @type {zebkit.ui.Combo}
                  * @readOnly
                  */
 
-                this.childInputEvent = function(e){
-                    if (e.ID == KE.PRESSED && e.code == KE.ESCAPE && this.parent != null){
+                this.childKeyPressed = function(e){
+                    if (e.code === pkg.KeyEvent.ESCAPE && this.parent != null){
                         this.removeMe();
+                        if (this.owner != null) this.owner.requestFocus();
                     }
                 };
             },
@@ -1316,34 +1303,59 @@ pkg.Combo = Class(pkg.Panel, [
 
         /**
          * Read-only content area combo box component panel class
-         * @extends zebra.ui.Combo.ContentPan
-         * @class  zebra.ui.Combo.ReadonlyContentPan
+         * @extends zebkit.ui.Combo.ContentPan
+         * @class  zebkit.ui.Combo.ReadonlyContentPan
          */
         this.ReadonlyContentPan = Class(this.ContentPan, [
             function $prototype() {
-                this.calcPreferredSize = function(l){
-                    var p = this.getCombo();
-                    return p ? p.list.calcMaxItemSize() : { width:0, height:0 };
+                this.calcPsByContent = false;
+
+                this.getCurrentView = function() {
+                    var list = this.getCombo().list,
+                        selected = list.getSelected();
+
+                    return selected != null ? list.provider.getView(list, selected, list.selectedIndex)
+                                            : null;
                 };
 
                 this.paintOnTop = function(g){
-                    var list = this.getCombo().list,
-                        selected = list.getSelected(),
-                        v = selected != null ? list.provider.getView(list, selected, list.selectedIndex) : null;
+                    var v = this.getCurrentView();
 
                     if (v != null) {
                         var ps = v.getPreferredSize();
-                        v.paint(g, this.getLeft(), this.getTop() + ~~((this.height - this.getTop() - this.getBottom() - ps.height) / 2),
+                        v.paint(g, this.getLeft(),
+                                   this.getTop() + Math.floor((this.height - this.getTop() - this.getBottom() - ps.height) / 2),
                                    this.width, ps.height, this);
                     }
                 };
+
+                this.setCalcPsByContent = function(b) {
+                    if (this.calcPsByContent != b) {
+                        this.calcPsByContent = b;
+                        this.vrp();
+                    }
+                };
+
+                this.calcPreferredSize = function(l) {
+                    var p = this.getCombo();
+                    if (p != null && this.calcPsByContent !== true) {
+                        return p.list.calcMaxItemSize();
+                    }
+                    var cv = this.getCurrentView();
+                    return cv == null ? { width: 0, height: 0} : cv.getPreferredSize();
+                };
+
+                this.comboValueUpdated = function(combo, value) {
+                    if (this.calcPsByContent === true) this.invalidate();
+                };
             }
+
         ]);
 
         /**
          * Editable content area combo box component panel class
-         * @class zebra.ui.Combo.EditableContentPan
-         * @extends zebra.ui.Combo.ContentPan
+         * @class zebkit.ui.Combo.EditableContentPan
+         * @extends zebkit.ui.Combo.ContentPan
          */
 
         /**
@@ -1353,7 +1365,7 @@ pkg.Combo = Class(pkg.Panel, [
             ...
         });
 
-         * @param {zebra.ui.Combo.ContentPan} contentPan a content panel that
+         * @param {zebkit.ui.Combo.ContentPan} contentPan a content panel that
          * updated its value
          * @param {Object} newValue a new value the content panel has been set
          * with
@@ -1362,32 +1374,7 @@ pkg.Combo = Class(pkg.Panel, [
         this.EditableContentPan = Class(this.ContentPan, [
             function $clazz() {
                 this.TextField = Class(pkg.TextField, []);
-            },
-
-            function (){
-                this.$super(new L.BorderLayout());
-                this._ = new ContentListeners();
-
-                this.isEditable = true;
-
-                this.dontGenerateUpdateEvent = false;
-
-                /**
-                 * A reference to a text field component the content panel uses as a
-                 * value editor
-                 * @attribute textField
-                 * @readOnly
-                 * @private
-                 * @type {zebra.ui.TextField}
-                 */
-                this.textField = new this.$clazz.TextField("",  -1);
-                this.textField.view.target.bind(this);
-                this.add(L.CENTER, this.textField);
-            },
-
-            function focused(){
-                this.$super();
-                this.textField.requestFocus();
+                this.Listeners = zebkit.util.ListenersClass("contentUpdated");
             },
 
             function $prototype() {
@@ -1401,7 +1388,7 @@ pkg.Combo = Class(pkg.Panel, [
 
                 /**
                  * Called when the combo box content has been updated
-                 * @param {zebra.ui.Combo} combo a combo where the new value has been set
+                 * @param {zebkit.ui.Combo} combo a combo where the new value has been set
                  * @param {Object} v a new combo box value
                  * @method comboValueUpdated
                  */
@@ -1416,13 +1403,39 @@ pkg.Combo = Class(pkg.Panel, [
                         this.dontGenerateUpdateEvent = false;
                     }
                 };
+            },
+
+            function focused(){
+                this.$super();
+                this.textField.requestFocus();
+            },
+
+            function (){
+                this.$super();
+                this._ = new this.clazz.Listeners();
+
+                this.isEditable = true;
+
+                this.dontGenerateUpdateEvent = false;
+
+                /**
+                 * A reference to a text field component the content panel uses as a
+                 * value editor
+                 * @attribute textField
+                 * @readOnly
+                 * @private
+                 * @type {zebkit.ui.TextField}
+                 */
+                this.textField = new this.clazz.TextField("",  -1);
+                this.textField.view.target.bind(this);
+                this.add("center", this.textField);
             }
         ]);
+
 
         this.Button = Class(pkg.Button, [
             function() {
                 this.setFireParams(true,  -1);
-                this.setCanHaveFocus(false);
                 this.$super();
             }
         ]);
@@ -1431,7 +1444,7 @@ pkg.Combo = Class(pkg.Panel, [
     },
 
     /**
-     * @for zebra.ui.Combo
+     * @for zebkit.ui.Combo
      */
     function $prototype() {
         this.paint = function(g){
@@ -1448,19 +1461,20 @@ pkg.Combo = Class(pkg.Panel, [
         };
 
         this.catchInput = function (child) {
-            return child != this.button && (this.content == null || !this.content.isEditable);
+            return child != this.button && (this.content == null || this.content.isEditable !== true);
         };
 
         this.canHaveFocus = function() {
-            return this.winpad.parent == null && (this.content != null || !this.content.isEditable);
+            return this.winpad.parent == null && (this.content != null && this.content.isEditable !== true);
         };
 
         this.contentUpdated = function(src, text){
-            if (src == this.content){
+            if (src === this.content) {
                 try {
                     this.$lockListSelEvent = true;
-                    if (text == null) this.list.select(-1);
-                    else {
+                    if (text == null) {
+                        this.list.select(-1);
+                    } else {
                         var m = this.list.model;
                         for(var i = 0;i < m.count(); i++){
                             var mv = m.get(i);
@@ -1472,7 +1486,7 @@ pkg.Combo = Class(pkg.Panel, [
                     }
                 }
                 finally { this.$lockListSelEvent = false; }
-                this._.fired(this, text);
+                this._.selected(this, text);
             }
         };
 
@@ -1486,6 +1500,8 @@ pkg.Combo = Class(pkg.Panel, [
             this.list.select(i);
         };
 
+        // !!!
+        // this method has been added to support selectedIndex property setter
         this.setSelectedIndex = function(i) {
             this.select(i);
         };
@@ -1509,23 +1525,28 @@ pkg.Combo = Class(pkg.Panel, [
         };
 
         /**
-         * Define mouse pressed events handler
-         * @param  {zebra.ui.MouseEvent} e a mouse event
-         * @method mousePressed
+         * Define pointer pressed events handler
+         * @param  {zebkit.ui.PointerEvent} e a pointer event
+         * @method pointerPressed
          */
-        this.mousePressed = function (e) {
-            if (e.isActionMask() && this.content != null             &&
+        this.pointerPressed = function (e) {
+            if (e.isAction() && this.content != null              &&
                 (new Date().getTime() - this.winpad.$closeTime) > 100 &&
-                e.x > this.content.x && e.y > this.content.y         &&
-                e.x < this.content.x + this.content.width            &&
+                e.x > this.content.x && e.y > this.content.y          &&
+                e.x < this.content.x + this.content.width             &&
                 e.y < this.content.y + this.content.height              )
             {
                 this.showPad();
             }
         };
 
+        /**
+         * Test if the combo window pad is shown
+         * @return {Boolean} true if the combo window pad is shown
+         * @method isPadShown
+         */
         this.isPadShown = function() {
-            return this.winpad != null && this.winpad.parent != null;
+            return this.winpad != null && this.winpad.parent != null && this.winpad.isVisible === true;
         };
 
         /**
@@ -1547,43 +1568,46 @@ pkg.Combo = Class(pkg.Panel, [
         this.showPad = function(){
             var canvas = this.getCanvas();
             if (canvas != null) {
-                var winlayer = canvas.getLayer(pkg.PopupLayer.ID),
-                    ps       = this.winpad.getPreferredSize(),
-                    p        = L.toParentOrigin(0, 0, this),
-                    px       = p.x,
-                    py       = p.y;
+                var ps  = this.winpad.getPreferredSize(),
+                    p   = zebkit.layout.toParentOrigin(0, 0, this),
+                    py  = p.y;
 
-                if (this.winpad.hbar && ps.width > this.width) {
-                    ps.height += this.winpad.hbar.getPreferredSize().height;
-                }
+                // if (this.winpad.hbar && ps.width > this.width) {
+                //     ps.height += this.winpad.hbar.getPreferredSize().height;
+                // }
 
                 if (this.maxPadHeight > 0 && ps.height > this.maxPadHeight) {
                     ps.height = this.maxPadHeight;
                 }
 
                 if (py + this.height + ps.height > canvas.height) {
-                    if (py - ps.height >= 0) py -= (ps.height + this.height);
-                    else {
+                    if (py - ps.height >= 0) {
+                        py -= (ps.height + this.height);
+                    } else {
                         var hAbove = canvas.height - py - this.height;
                         if(py > hAbove) {
                             ps.height = py;
                             py -= (ps.height + this.height);
+                        } else {
+                            ps.height = hAbove;
                         }
-                        else ps.height = hAbove;
                     }
                 }
 
-                this.winpad.setSize(this.width, ps.height);
-                this.winpad.setLocation(px, py + this.height);
+                this.winpad.setBounds(p.x, py + this.height,
+                                      this.winpad.adjustToComboSize === true ? this.width : ps.width,
+                                      ps.height);
+
                 this.list.notifyScrollMan(this.list.selectedIndex);
-                winlayer.add(this, this.winpad);
+                canvas.getLayer(pkg.PopupLayer.ID).add(this, this.winpad);
                 this.list.requestFocus();
+                if (this.padShown != null) this.padShown(true);
             }
         };
 
         /**
          * Bind the given list component to the combo box component.
-         * @param {zebra.ui.BaseList} l a list component
+         * @param {zebkit.ui.BaseList} l a list component
          * @method setList
          */
         this.setList = function(l){
@@ -1595,7 +1619,7 @@ pkg.Combo = Class(pkg.Panel, [
                 if (this.list._) this.list.bind(this);
 
                 var $this = this;
-                this.winpad = new this.$clazz.ComboPadPan(this.list, [
+                this.winpad = new this.clazz.ComboPadPan(this.list, [
                     function setParent(p) {
                         this.$super(p);
                         if ($this.padShown != null) {
@@ -1614,36 +1638,39 @@ pkg.Combo = Class(pkg.Panel, [
 
         /**
          * Define key pressed events handler
-         * @param  {zebra.ui.KeyEvent} e a key event
+         * @param  {zebkit.ui.KeyEvent} e a key event
          * @method keyPressed
          */
-        this.keyPressed = function (e){
+        this.keyPressed = function (e) {
+            console.log("Combo.keyPressed() " + e.code);
             if (this.list.model != null) {
                 var index = this.list.selectedIndex;
                 switch(e.code) {
-                    case KE.ENTER: this.showPad(); break;
-                    case KE.LEFT :
-                    case KE.UP   : if (index > 0) this.list.select(index - 1); break;
-                    case KE.DOWN :
-                    case KE.RIGHT: if (this.list.model.count() - 1 > index) this.list.select(index + 1); break;
+                    case pkg.KeyEvent.ENTER: this.showPad(); break;
+                    case pkg.KeyEvent.LEFT :
+                    case pkg.KeyEvent.UP   : if (index > 0) this.list.select(index - 1); break;
+                    case pkg.KeyEvent.DOWN :
+                    case pkg.KeyEvent.RIGHT: if (this.list.model.count() - 1 > index) this.list.select(index + 1); break;
                 }
             }
         };
 
         /**
          * Define key typed  events handler
-         * @param  {zebra.ui.KeyEvent} e a key event
+         * @param  {zebkit.ui.KeyEvent} e a key event
          * @method keyTyped
          */
-        this.keyTyped = function(e) { this.list.keyTyped(e); };
+        this.keyTyped = function(e) {
+            this.list.keyTyped(e);
+        };
 
         /**
          * Set the given combo box selection view
-         * @param {zebra.ui.View} c a view
+         * @param {zebkit.ui.View} c a view
          * @method setSelectionView
          */
         this.setSelectionView = function (c){
-            if (c != this.selectionView){
+            if (c != this.selectionView) {
                 this.selectionView = pkg.$view(c);
                 this.repaint();
             }
@@ -1655,59 +1682,101 @@ pkg.Combo = Class(pkg.Panel, [
          * @method setMaxPadHeight
          */
         this.setMaxPadHeight = function(h){
-            if(this.maxPadHeight != h){
+            if (this.maxPadHeight != h) {
                 this.hidePad();
                 this.maxPadHeight = h;
             }
         };
+
+        this.setEditable = function(b) {
+            if (this.content == null || this.content.isEditable != b) {
+                var ctr = "center";
+                if (this.content != null) {
+                    ctr = this.content.constraints;
+                    this.content.removeMe();
+                }
+                this.add(ctr, b ? new this.clazz.EditableContentPan()
+                                : new this.clazz.ReadonlyContentPan());
+            }
+        };
+
+        /**
+         * Combo box button listener method. The method triggers showing
+         * combo box pad window when the combo button has been pressed
+         * @param  {zebkit.ui.Button} src a button that has been pressed
+         * @method fired
+         */
+        this.fired = function(src) {
+            if ((new Date().getTime() - this.winpad.$closeTime) > 100) {
+                this.showPad();
+            }
+        };
+
+        this.selected = function(src, data) {
+            if (this.$lockListSelEvent === false){
+                this.hidePad();
+                if (this.content != null) {
+                    this.content.comboValueUpdated(this, this.list.getSelected());
+                    if (this.content.isEditable === true) {
+                        pkg.focusManager.requestFocus(this.content);
+                    }
+                    this.repaint();
+                }
+                this._.selected(this, data);
+            }
+        };
     },
 
-    function() {
-        this.$this(new this.$clazz.List(true));
-    },
+    function(list, editable) {
+        if (list != null && zebkit.isBoolean(list)) {
+            editable = list;
+            list = null;
+        }
 
-    function(list){
-        if (zebra.isBoolean(list)) this.$this(new this.$clazz.List(true), list);
-        else this.$this(list, false);
-    },
+        if (editable == null) {
+            editable = false;
+        }
 
-    function(list, editable){
+        if (list == null) {
+            list = new this.clazz.List(true);
+        }
+
         /**
          * Reference to combo box list component
          * @attribute list
          * @readOnly
-         * @type {zebra.ui.BaseList}
+         * @type {zebkit.ui.BaseList}
          */
-        if (zebra.instanceOf(list, pkg.BaseList) === false) {
-            list = new this.$clazz.List(list, true);
+        if (zebkit.instanceOf(list, pkg.BaseList) === false) {
+            list = new this.clazz.List(list, true);
         }
 
         /**
          * Reference to combo box button component
          * @attribute button
          * @readOnly
-         * @type {zebra.ui.Panel}
+         * @type {zebkit.ui.Panel}
          */
 
         /**
          * Reference to combo box content component
          * @attribute content
          * @readOnly
-         * @type {zebra.ui.Panel}
+         * @type {zebkit.ui.Panel}
          */
 
         /**
          * Reference to combo box pad component
          * @attribute winpad
          * @readOnly
-         * @type {zebra.ui.Panel}
+         * @type {zebkit.ui.Panel}
          */
 
         /**
          * Reference to selection view
          * @attribute selectionView
          * @readOnly
-         * @type {zebra.ui.View}
+         * @type {zebkit.ui.View}
          */
 
         this.button = this.content = this.winpad = null;
@@ -1721,13 +1790,14 @@ pkg.Combo = Class(pkg.Panel, [
         this.maxPadHeight = 0;
 
         this.$lockListSelEvent = false;
-        this._ = new zebra.util.Listeners();
+        this._ = new this.clazz.Listeners();
         this.setList(list);
+
         this.$super();
 
-        this.add(L.CENTER, editable ? new this.$clazz.EditableContentPan()
-                                    : new this.$clazz.ReadonlyContentPan());
-        this.add(L.RIGHT, new this.$clazz.Button());
+        this.add("center", editable ? new this.clazz.EditableContentPan()
+                                    : new this.clazz.ReadonlyContentPan());
+        this.add("right", new this.clazz.Button());
     },
 
     function focused(){
@@ -1736,7 +1806,7 @@ pkg.Combo = Class(pkg.Panel, [
     },
 
     function kidAdded(index,s,c){
-        if (zebra.instanceOf(c, this.$clazz.ContentPan)) {
+        if (zebkit.instanceOf(c, this.clazz.ContentPan)) {
             if (this.content != null) {
                 throw new Error("Content panel is set");
             }
@@ -1757,41 +1827,15 @@ pkg.Combo = Class(pkg.Panel, [
     },
 
     function kidRemoved(index,l){
-        if (this.content == l){
+        if (this.content === l){
             if (l._ != null) l.unbind(this);
             this.content = null;
         }
 
         this.$super(index, l);
-        if(this.button == l){
+        if (this.button === l) {
             this.button.unbind(this);
             this.button = null;
-        }
-    },
-
-    /**
-     * Combo box button listener method. The method triggers showing
-     * combo box pad window when the combo button has been pressed
-     * @param  {zebra.ui.Button} src a button that has been pressed
-     * @method fired
-     */
-    function fired(src) {
-        if ((new Date().getTime() - this.winpad.$closeTime) > 100) {
-            this.showPad();
-        }
-    },
-
-    function fired(src, data) {
-        if (this.$lockListSelEvent === false){
-            this.hidePad();
-            if (this.content != null) {
-                this.content.comboValueUpdated(this, this.list.getSelected());
-                if (this.content.isEditable) {
-                    pkg.focusManager.requestFocus(this.content);
-                }
-                this.repaint();
-            }
-            this._.fired(this, data);
         }
     },
 
@@ -1807,86 +1851,7 @@ pkg.Combo = Class(pkg.Panel, [
 ]);
 
 /**
- * Combo box arrow view. The view is used to render combo box arrow element
- * in pressed  and unpressed state.
- * @class zebra.ui.ComboArrowView
- * @constructor
- * @param {String} [col] a color of arrow element
- * @param {Boolean} [state] a state of arrow element. true means pressed state.
- * @extends zebra.ui.View
- */
-pkg.ComboArrowView = Class(pkg.View, [
-    function $prototype() {
-        this[''] = function(col, state) {
-            /**
-             * Arrow color
-             * @type {String}
-             * @readOnly
-             * @default "black"
-             * @attribute color
-             */
-
-            /**
-             * Arrow state to be rendered
-             * @type {Boolean}
-             * @readOnly
-             * @default false
-             * @attribute state
-             */
-
-            /**
-             * Top, left, right and bottom gap value
-             * @type {Integer}
-             * @readOnly
-             * @default 4
-             * @attribute gap
-             */
-
-            this.color = col == null ? "black" : col;
-            this.state = state == null ? false : state;
-            this.gap   = 4;
-        };
-
-        this.paint = function(g, x, y, w, h, d) {
-            if (this.state) {
-                g.setColor("#CCCCCC");
-                g.drawLine(x, y, x, y + h);
-                g.setColor("gray");
-                g.drawLine(x + 1, y, x + 1, y + h);
-            }
-            else {
-                g.setColor("#CCCCCC");
-                g.drawLine(x, y, x, y + h);
-                g.setColor("#EEEEEE");
-                g.drawLine(x + 1, y, x + 1, y + h);
-            }
-
-            x += this.gap + 1;
-            y += this.gap + 1;
-            w -= this.gap * 2;
-            h -= this.gap * 2;
-
-            var s = Math.min(w, h);
-            x = x + (w - s)/2 + 1;
-            y = y + (h - s)/2;
-
-            g.setColor(this.color);
-            g.beginPath();
-            g.moveTo(x, y);
-            g.lineTo(x + s, y);
-            g.lineTo(x + s/2, y + s);
-            g.lineTo(x, y);
-            g.fill();
-        };
-
-        this.getPreferredSize = function() {
-            return { width: 2 * this.gap + 6, height:2 * this.gap + 6 };
-        };
-    }
-]);
-
-/**
  * @for
  */
 
-})(zebra("ui"), zebra.Class);
+});

@@ -1,7 +1,7 @@
-zebra.package("ui.demo", function(pkg, Class) {
+zebkit.package("ui.demo", function(pkg, Class) {
 
-var ui = zebra.ui;
-eval(zebra.Import("ui", "ui.designer", "layout"));
+var ui = zebkit.ui;
+eval(zebkit.Import("ui", "ui.designer", "layout"));
 
 pkg.DesignerDemo = new Class(pkg.DemoPan, [
     function() {
@@ -55,8 +55,11 @@ pkg.DesignerDemo = new Class(pkg.DemoPan, [
         b.setLocation(140, 230);
         pp.add(new ShaperPan(b));
 
-        var t = new zebra.ui.tree.Tree(new FormTreeModel(pp, [
-            function exclude(c) { return zebra.instanceOf(c, ShaperPan); }
+
+        //pp.setBorder(new Border("black"));
+
+        var t = new zebkit.ui.tree.Tree(new FormTreeModel(pp, [
+            function exclude(c) { return zebkit.instanceOf(c, ShaperPan); }
         ]));
 
         var s = new SplitPan(new ScrollPan(t), pp);
@@ -67,7 +70,7 @@ pkg.DesignerDemo = new Class(pkg.DemoPan, [
             var i = p.indexOf(c);
             if (i >= 0) {
                 while (p != null && typeof(p) != "undefined") {
-                    if (zebra.instanceOf(p, ShaperPan)) return p;
+                    if (zebkit.instanceOf(p, ShaperPan)) return p;
                     p = p.parent;
                 }
             }
@@ -82,22 +85,26 @@ pkg.DesignerDemo = new Class(pkg.DemoPan, [
 
         var prev = null, prevCol = null;
         t.bind(function selected(src, data) {
-                var c = lookup(pp, data.comp);
-                if (prev != null) {
-                    prev.setBackground(null);
-                }
+            var c = lookup(pp, src.selected.comp);
 
-                prev = c;
-                if (c != null) {
-                    c.setBackground(new Gradient("#F0F0F0", "#E0E0E0"));
-                }
-            });
+            if (prev != null) {
+                prev.setBackground(null);
+            }
 
-        var l = new Label(new zebra.data.Text("This page represents number of Zebra components to control UI components size and location"));
+            prev = c;
+            if (c != null) {
+                c.setBackground(new Gradient("#F0F0F0", "#E0E0E0"));
+            }
+        });
+
+        var l = new Label(new zebkit.data.Text("This page represents number of Zebkit components to control UI components size and location"));
         l.setPadding(6);
         l.setFont(ui.boldFont);
-        this.add(TOP, l);
-        this.add(CENTER, s);
+        this.add("top", l);
+        this.add("center", s);
+
+
+        //this.setBackground("gray");
     }
 ]);
 

@@ -1,4 +1,6 @@
-(function(pkg, Class, ui)  {
+zebkit.package("ui.tree", function(pkg, Class) {
+
+var ui = zebkit("ui");
 
 /**
  * Tree UI components and all related to the component classes and interfaces.
@@ -7,7 +9,7 @@
  * organize customizable editing of the items.
 
         // create tree component instance to visualize the given tree model
-        var tree = new zebra.ui.tree.Tree({
+        var tree = new zebkit.ui.tree.Tree({
             value: "Root",
             kids : [
                 "Item 1",
@@ -17,18 +19,18 @@
         });
 
         // make all tree items editable with text field component
-        tree.setEditorProvider(new zebra.ui.tree.DefEditors());
+        tree.setEditorProvider(new zebkit.ui.tree.DefEditors());
 
  * One more tree  component implementation - "CompTree" - allows developers
  * to create tree whose nodes are  other UI components
 
         // create tree component instance to visualize the given tree model
-        var tree = new zebra.ui.tree.CompTree({
-            value: new zebra.ui.Label("Root label item"),
+        var tree = new zebkit.ui.tree.CompTree({
+            value: new zebkit.ui.Label("Root label item"),
             kids : [
-                new zebra.ui.Checkbox("Checkbox Item"),
-                new zebra.ui.Button("Button Item"),
-                new zebra.ui.TextField("Text field item")
+                new zebkit.ui.Checkbox("Checkbox Item"),
+                new zebkit.ui.Button("Button Item"),
+                new zebkit.ui.TextField("Text field item")
             ]
         });
 
@@ -36,15 +38,10 @@
  * @main
  */
 
-
 //  tree node metrics:
 //   |
 //   |-- <-gapx-> {icon} -- <-gapx-> {view}
 //
-//
-
-
-var KE = ui.KeyEvent;
 
 /**
  * Simple private structure to keep a tree model item metrical characteristics
@@ -54,7 +51,7 @@ var KE = ui.KeyEvent;
  * the state indicates if the given tree node is collapsed (false) or expanded
  * (true)
  * @private
- * @class zebra.ui.tree.$IM
+ * @class zebkit.ui.tree.$IM
  */
 pkg.$IM = function(b) {
     /**
@@ -101,8 +98,6 @@ pkg.$IM = function(b) {
     this.isOpen = b;
 };
 
-pkg.TreeListeners = zebra.util.ListenersClass("toggled", "selected");
-
 /**
  * Abstract tree component that can used as basement for building own tree components.
  * The component is responsible for rendering tree, calculating tree nodes metrics,
@@ -115,9 +110,9 @@ pkg.TreeListeners = zebra.util.ListenersClass("toggled", "selected");
       a tree item has to be visualized by implementing "this.paintItem(...)" method
 
  *
- * @class zebra.ui.tree.BaseTree
+ * @class zebkit.ui.tree.BaseTree
  * @constructor
- * @param {zebra.data.TreeModel|Object} a tree model. It can be an instance of tree model
+ * @param {zebkit.data.TreeModel|Object} a tree model. It can be an instance of tree model
  * class or an object that described tree model. An example of such object is shown below:
 
         {
@@ -135,7 +130,7 @@ pkg.TreeListeners = zebra.util.ListenersClass("toggled", "selected");
         }
 
  * @param {Boolean} [nodeState] a default tree nodes state (expanded or collapsed)
- * @extends {zebra.ui.Panel}
+ * @extends {zebkit.ui.Panel}
  */
 
  /**
@@ -146,24 +141,57 @@ pkg.TreeListeners = zebra.util.ListenersClass("toggled", "selected");
         });
 
   * @event toggled
-  * @param  {zebra.ui.tree.BaseTree} src an tree component that triggers the event
-  * @param  {zebra.data.Item} item an tree item that has been toggled
+  * @param  {zebkit.ui.tree.BaseTree} src a tree component that triggers the event
+  * @param  {zebkit.data.Item} item an tree item that has been toggled
   */
 
  /**
   * Fired when a tree item has been selected
 
-      tree.bind(function selected(src, item) {
+      tree.bind(function selected(src, prevItem) {
          ...
       });
 
   * @event selected
-  * @param  {zebra.ui.tree.BaseTree} src an tree component that triggers the event
-  * @param  {zebra.data.Item} item an tree item that has been toggled
+  * @param  {zebkit.ui.tree.BaseTree} src a tree component that triggers the event
+  * @param  {zebkit.data.Item} prevItem a previously selected tree item
+  */
+
+
+/**
+  * Fired when a tree item editing has been started
+
+      tree.bind(function editingStarted(src, item, editor) {
+         ...
+      });
+
+  * @event editingStarted
+  * @param  {zebkit.ui.tree.BaseTree} src an tree component that triggers the event
+  * @param  {zebkit.data.Item} item a tree item to be edited
+  * @param  {zebkit.ui.Panel} editor an editor to be used to edit the given item
+  */
+
+/**
+  * Fired when a tree item editing has been stopped
+
+      tree.bind(function editingStopped(src, item, oldValue, editor, isApplied) {
+         ...
+      });
+
+  * @event editingStopped
+  * @param  {zebkit.ui.tree.BaseTree} src a tree component that triggers the event
+  * @param  {zebkit.data.Item} item a tree item that has been edited
+  * @param  {Object} oldValue an old value of the edited tree item
+  * @param  {zebkit.ui.Panel} editor an editor to be used to edit the given item
+  * @param  {Boolean} isApplied flag that indicates if the edited value has been
+  * applied to the given tree item
   */
 pkg.BaseTree = Class(ui.Panel, [
-    function $prototype() {
+    function  $clazz() {
+        this.Listeners = zebkit.util.ListenersClass("toggled", "selected", "editingStarted", "editingStopped");
+    },
 
+    function $prototype() {
         /**
          * Horizontal gap between a node elements: toggle, icons and tree item view
          * @attribute gapx
@@ -185,7 +213,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Test if the given tree component item is opened
-         * @param  {zebra.data.Item}  i a tree model item
+         * @param  {zebkit.data.Item}  i a tree model item
          * @return {Boolean} true if the given tree component item is opened
          * @method isOpen
          */
@@ -196,7 +224,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Get calculated for the given tree model item metrics
-         * @param  {zebra.data.Item} i a tree item
+         * @param  {zebkit.data.Item} i a tree item
          * @return {Object}   an tree model item metrics. Th
          * @method getItemMetrics
          */
@@ -213,8 +241,8 @@ pkg.BaseTree = Class(ui.Panel, [
             this.select(root);
         };
 
-        this.mousePressed = function(e){
-            if (this.firstVisible != null && e.isActionMask()) {
+        this.pointerPressed = function(e){
+            if (this.firstVisible != null && e.isAction()) {
                 var x = e.x,
                     y = e.y,
                     root = this.getItemAt(this.firstVisible, x, y);
@@ -254,8 +282,8 @@ pkg.BaseTree = Class(ui.Panel, [
                                                                                           : this.prevVisible(this.firstVisible);
                         }
                         else {
-                            this.firstVisible = (-this.scrollManager.getSY() > ~~(this.maxh / 2)) ? this.prevVisible(this.findLast(this.model.root))
-                                                                                                  : this.nextVisible(this.model.root);
+                            this.firstVisible = (-this.scrollManager.getSY() > Math.floor(this.maxh / 2)) ? this.prevVisible(this.findLast(this.model.root))
+                                                                                                          : this.nextVisible(this.model.root);
                         }
                     }
                 }
@@ -274,7 +302,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Get tree model item  metrical bounds (location and size).
-         * @param  {zebra.data.Item} root an tree model item
+         * @param  {zebkit.data.Item} root an tree model item
          * @return {Object} a structure that keeps an item view location
          * and size:
 
@@ -294,7 +322,7 @@ pkg.BaseTree = Class(ui.Panel, [
                 image   = this.getIconBounds(root);
 
             toggle.x = image.x + image.width + (image.width > 0 || toggle.width > 0 ? this.gapx : 0);
-            toggle.y = metrics.y + ~~((metrics.height - metrics.viewHeight) / 2);
+            toggle.y = metrics.y + Math.floor((metrics.height - metrics.viewHeight) / 2);
             toggle.width = metrics.viewWidth;
             toggle.height = metrics.viewHeight;
             return toggle;
@@ -302,7 +330,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Get toggle element bounds for the given tree model item.
-         * @param  {zebra.data.Item} root an tree model item
+         * @param  {zebkit.data.Item} root an tree model item
          * @return {Object} a structure that keeps an item toggle location
          * and size:
 
@@ -318,14 +346,17 @@ pkg.BaseTree = Class(ui.Panel, [
          */
         this.getToggleBounds = function(root){
             var node = this.getIM(root), d = this.getToggleSize(root);
-            return { x:node.x, y:node.y + ~~((node.height - d.height) / 2), width:d.width, height:d.height };
+            return { x     : node.x,
+                     y     : node.y + Math.floor((node.height - d.height) / 2),
+                     width : d.width,
+                     height: d.height };
         };
 
         /**
          * Get current toggle element view. The view depends on the state of tree item.
-         * @param  {zebra.data.Item} i a tree model item
+         * @param  {zebkit.data.Item} i a tree model item
          * @protected
-         * @return {zebra.ui.View}  a toggle element view
+         * @return {zebkit.ui.View}  a toggle element view
          * @method getToogleView
          */
         this.getToggleView = function(i){
@@ -337,7 +368,7 @@ pkg.BaseTree = Class(ui.Panel, [
          * An abstract method that a concrete tree component implementations have to
          * override. The method has to return a preferred size the given tree model
          * item wants to have.
-         * @param  {zebra.data.Item} root an tree model item
+         * @param  {zebkit.data.Item} root an tree model item
          * @return {Object} a structure that keeps an item preferred size:
 
                 {
@@ -357,8 +388,8 @@ pkg.BaseTree = Class(ui.Panel, [
          * override. The method has to render the given tree node of the specified
          * tree model item at the given location
          * @param  {2DContext} g a graphical context
-         * @param  {zebra.data.Item} root a tree model item to be rendered
-         * @param  {zebra.ui.tree.$IM} node a tree node metrics
+         * @param  {zebkit.data.Item} root a tree model item to be rendered
+         * @param  {zebkit.ui.tree.$IM} node a tree node metrics
          * @param  {Ineteger} x a x location where the tree node has to be rendered
          * @param  {Ineteger} y a y location where the tree node has to be rendered
          * @method paintItem
@@ -377,7 +408,7 @@ pkg.BaseTree = Class(ui.Panel, [
                 var imageSize = this.getIconSize(root), toggleSize = this.getToggleSize(root);
                 if (parent != null){
                     var pImg = this.getIconBounds(parent);
-                    x = pImg.x + ~~((pImg.width - toggleSize.width) / 2);
+                    x = pImg.x + Math.floor((pImg.width - toggleSize.width) / 2);
                 }
 
                 node.x = x;
@@ -415,8 +446,8 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Get a tree node metrics by the given tree model item.
-         * @param  {zebra.data.Item} i a tree model item
-         * @return {zebra.ui.tree.$IM} a tree node metrics
+         * @param  {zebkit.data.Item} i a tree model item
+         * @return {zebkit.ui.tree.$IM} a tree node metrics
          * @protected
          * @method getIM
          */
@@ -431,10 +462,10 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Get a tree item that is located at the given location.
-         * @param  {zebra.data.Item} [root] a starting tree node
+         * @param  {zebkit.data.Item} [root] a starting tree node
          * @param  {Integer} x a x coordinate
          * @param  {Integer} y a y coordinate
-         * @return {zebra.data.Item} a tree model item
+         * @return {zebkit.data.Item} a tree model item
          * @method getItemAt
          */
         this.getItemAt = function(root, x, y){
@@ -491,15 +522,15 @@ pkg.BaseTree = Class(ui.Panel, [
         };
 
         this.getIconSize = function (i) {
-            var v =  i.kids.length > 0 ? (this.getIM(i).isOpen ? this.viewSizes.open
-                                                               : this.viewSizes.close)
+            var v = i.kids.length > 0 ? (this.getIM(i).isOpen ? this.viewSizes.open
+                                                              : this.viewSizes.close)
                                        : this.viewSizes.leaf;
-            return v ? v : { width:0, height:0 };
+            return v != null ? v : { width:0, height:0 };
         };
 
         /**
          * Get icon element bounds for the given tree model item.
-         * @param  {zebra.data.Item} root an tree model item
+         * @param  {zebkit.data.Item} root an tree model item
          * @return {Object} a structure that keeps an item icon location
          * and size:
 
@@ -513,30 +544,30 @@ pkg.BaseTree = Class(ui.Panel, [
          * @method getToggleBounds
          * @protected
          */
-        this.getIconBounds = function (root){
+        this.getIconBounds = function(root) {
             var node = this.getIM(root),
                 id   = this.getIconSize(root),
                 td   = this.getToggleSize(root);
             return { x:node.x + td.width + (td.width > 0 ? this.gapx : 0),
-                     y:node.y + ~~((node.height - id.height) / 2),
+                     y:node.y + Math.floor((node.height - id.height) / 2),
                      width:id.width, height:id.height };
         };
 
-        this.getToggleSize = function (i){
+        this.getToggleSize = function(i) {
             return this.isOpen_(i) ? this.viewSizes.on : this.viewSizes.off;
         };
 
-        this.isOverVisibleArea = function (i){
+        this.isOverVisibleArea = function (i) {
             var node = this.getIM(i);
             return node.y + node.height + this.scrollManager.getSY() < this.visibleArea.y;
         };
 
-        this.findOpened = function (item){
+        this.findOpened = function(item) {
             var parent = item.parent;
             return (parent == null || this.isOpen_(parent)) ? item : this.findOpened(parent);
         };
 
-        this.findNext = function (item){
+        this.findNext = function(item) {
             if (item != null){
                 if (item.kids.length > 0 && this.isOpen_(item)){
                     return item.kids[0];
@@ -642,7 +673,7 @@ pkg.BaseTree = Class(ui.Panel, [
                 dx   = this.scrollManager.getSX(),
                 dy   = this.scrollManager.getSY();
 
-            if (zebra.util.isIntersect(node.x + dx, node.y + dy,
+            if (zebkit.util.isIntersect(node.x + dx, node.y + dy,
                                        node.width, node.height,
                                        this.visibleArea.x, this.visibleArea.y,
                                        this.visibleArea.width, this.visibleArea.height))
@@ -651,7 +682,7 @@ pkg.BaseTree = Class(ui.Panel, [
                     toggleView = this.getToggleView(root),
                     image      = this.getIconBounds(root),
                     vx         = image.x + image.width + this.gapx,
-                    vy         = node.y + ~~((node.height - node.viewHeight) / 2);
+                    vy         = node.y + Math.floor((node.height - node.viewHeight) / 2);
 
                 if (toggleView != null) {
                     toggleView.paint(g, toggle.x, toggle.y, toggle.width, toggle.height, this);
@@ -672,10 +703,11 @@ pkg.BaseTree = Class(ui.Panel, [
 
                 if (this.lnColor != null){
                     g.setColor(this.lnColor);
-                    var yy = toggle.y + ~~(toggle.height / 2) + 0.5;
+                    var yy = toggle.y + Math.floor(toggle.height / 2) + 0.5;
 
                     g.beginPath();
-                    g.moveTo(toggle.x + (toggleView == null ? ~~(toggle.width / 2) : toggle.width - 1), yy);
+                    g.moveTo(toggle.x + (toggleView == null ? Math.floor(toggle.width / 2)
+                                                            : toggle.width - 1), yy);
                     g.lineTo(image.x, yy);
                     g.stroke();
                 }
@@ -693,9 +725,10 @@ pkg.BaseTree = Class(ui.Panel, [
         this.y_ = function (item, isStart){
             var node = this.getIM(item),
                 th = this.getToggleSize(item).height,
-                ty = node.y + ~~((node.height - th) / 2),
+                ty = node.y + Math.floor((node.height - th) / 2),
                 dy = this.scrollManager.getSY(),
-                y  = (item.kids.length > 0) ? (isStart ? ty + th : ty - 1) : ty + ~~(th / 2);
+                y  = (item.kids.length > 0) ? (isStart ? ty + th : ty - 1)
+                                            : ty + Math.floor(th / 2);
 
             return (y + dy < 0) ?  -dy - 1
                                 : ((y + dy > this.height) ? this.height - dy : y);
@@ -704,7 +737,7 @@ pkg.BaseTree = Class(ui.Panel, [
         /**
          * Paint children items of the given root tree item.
          * @param  {2DContext} g a graphical context
-         * @param  {zebra.data.Item} root a root tree item
+         * @param  {zebkit.data.Item} root a root tree item
          * @param  {Integer} index an index
          * @return {Boolean}
          * @protected
@@ -712,10 +745,10 @@ pkg.BaseTree = Class(ui.Panel, [
          */
         this.paintChild = function (g, root, index){
             var b = this.isOpen_(root);
-            if (root == this.firstVisible && this.lnColor != null){
+            if (root === this.firstVisible && this.lnColor != null) {
                 g.setColor(this.lnColor);
-                var xx = this.getIM(root).x + ~~((b ? this.viewSizes.on.width
-                                                    : this.viewSizes.off.width) / 2);
+                var xx = this.getIM(root).x + Math.floor((b ? this.viewSizes.on.width
+                                                            : this.viewSizes.off.width) / 2);
                 g.beginPath();
                 g.moveTo(xx + 0.5, this.getTop());
                 g.lineTo(xx + 0.5, this.y_(root, false));
@@ -725,13 +758,13 @@ pkg.BaseTree = Class(ui.Panel, [
                 var firstChild = root.kids[0];
                 if (firstChild == null) return true;
 
-                var x = this.getIM(firstChild).x + ~~((this.isOpen_(firstChild) ? this.viewSizes.on.width
-                                                                                : this.viewSizes.off.width) / 2),
+                var x = this.getIM(firstChild).x + Math.floor((this.isOpen_(firstChild) ? this.viewSizes.on.width
+                                                                                        : this.viewSizes.off.width) / 2),
                 count = root.kids.length;
                 if (index < count) {
                     var  node = this.getIM(root),
                          y    = (index > 0) ? this.y_(root.kids[index - 1], true)
-                                            : node.y + ~~((node.height + this.getIconSize(root).height) / 2);
+                                            : node.y + Math.floor((node.height + this.getIconSize(root).height) / 2);
 
                     for(var i = index;i < count; i ++ ){
                         var child = root.kids[i];
@@ -744,7 +777,7 @@ pkg.BaseTree = Class(ui.Panel, [
                             y = this.y_(child, true);
                         }
                         if (this.paintBranch(g, child) === false){
-                            if (this.lnColor != null && i + 1 != count){
+                            if (this.lnColor != null && i + 1 !== count){
                                 g.setColor(this.lnColor);
                                 g.beginPath();
                                 g.moveTo(x + 0.5, y);
@@ -774,7 +807,7 @@ pkg.BaseTree = Class(ui.Panel, [
                 this.vVisibility();
                 if (this.firstVisible != null){
                     var sx = this.scrollManager.getSX(), sy = this.scrollManager.getSY();
-                    try{
+                    try {
                         g.translate(sx, sy);
                         this.paintTree(g, this.firstVisible);
                         g.translate(-sx,  -sy);
@@ -789,29 +822,28 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Select the given item.
-         * @param  {zebra.data.Item} an item to be selected. Use null value to clear any selection
+         * @param  {zebkit.data.Item} an item to be selected. Use null value to clear any selection
          * @method  select
          */
         this.select = function(item){
-            if (this.isSelectable === true && item != this.selected){
+            if (this.isSelectable === true){
                 var old = this.selected;
 
                 this.selected = item;
-
                 if (this.selected != null) {
                     this.makeVisible(this.selected);
                 }
 
-                this._.selected(this, this.selected);
+                this._.selected(this, old);
 
-                if (old != null && this.isVerVisible(old)){
+                if (old != null && this.isVerVisible(old)) {
                     var m = this.getItemMetrics(old);
                     this.repaint(m.x + this.scrollManager.getSX(),
                                  m.y + this.scrollManager.getSY(),
                                  m.width, m.height);
                 }
 
-                if (this.selected != null && this.isVerVisible(this.selected)){
+                if (this.selected != null && this.isVerVisible(this.selected)) {
                     var m = this.getItemMetrics(this.selected);
                     this.repaint(m.x + this.scrollManager.getSX(),
                                  m.y + this.scrollManager.getSY(),
@@ -824,7 +856,7 @@ pkg.BaseTree = Class(ui.Panel, [
          * Make the given tree item visible. Tree component rendered content can takes more space than
          * the UI component size is. In this case the content can be scrolled to make visible required
          * tree item.
-         * @param  {zebra.data.Item} item an item to be visible
+         * @param  {zebkit.data.Item} item an item to be visible
          * @method makeVisible
          */
         this.makeVisible = function(item){
@@ -835,7 +867,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Toggle off or on recursively all items of the given item
-         * @param  {zebra.data.Item} root a starting item to toggle
+         * @param  {zebkit.data.Item} root a starting item to toggle
          * @param  {Boolean} b  true if all items have to be in opened
          * state and false otherwise
          * @method toggleAll
@@ -844,7 +876,7 @@ pkg.BaseTree = Class(ui.Panel, [
             var model = this.model;
             if (root.kids.length > 0){
                 if (this.getItemMetrics(root).isOpen != b) this.toggle(root);
-                for(var i = 0;i < root.kids.length; i++ ){
+                for(var i = 0; i < root.kids.length; i++ ){
                     this.toggleAll(root.kids[i], b);
                 }
             }
@@ -852,7 +884,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         /**
          * Toggle the given tree item
-         * @param  {zebra.data.Item} item an item to be toggled
+         * @param  {zebkit.data.Item} item an item to be toggled
          * @method toggle
          */
         this.toggle = function(item){
@@ -867,8 +899,8 @@ pkg.BaseTree = Class(ui.Panel, [
                     do {
                         parent = parent.parent;
                     }
-                    while(parent != item && parent != null);
-                    if(parent == item) this.select(item);
+                    while (parent !== item && parent != null);
+                    if (parent === item) this.select(item);
                 }
                 this.repaint();
             }
@@ -879,8 +911,8 @@ pkg.BaseTree = Class(ui.Panel, [
         };
 
         this.itemRemoved = function (target,item){
-            if (item == this.firstVisible) this.firstVisible = null;
-            if (item == this.selected) this.select(null);
+            if (item === this.firstVisible) this.firstVisible = null;
+            if (item === this.selected) this.select(null);
             delete this.nodes[item];
             this.vrp();
         };
@@ -897,14 +929,15 @@ pkg.BaseTree = Class(ui.Panel, [
         };
     },
 
-    function () { this.$this(null); },
-    function (d){ this.$this(d, true);},
+    function (d, b){
+        if (arguments.length < 2) {
+            b = true;
+        }
 
-    function (d,b){
          /**
           * Selected tree model item
           * @attribute selected
-          * @type {zebra.data.Item}
+          * @type {zebkit.data.Item}
           * @default null
           * @readOnly
           */
@@ -926,7 +959,7 @@ pkg.BaseTree = Class(ui.Panel, [
 
         this._isVal = false;
         this.nodes = {};
-        this._ = new pkg.TreeListeners();
+        this._ = new this.clazz.Listeners();
         this.setLineColor("gray");
 
         this.isOpenVal = b;
@@ -998,7 +1031,7 @@ pkg.BaseTree = Class(ui.Panel, [
      * For instance:
 
         // build tree UI component
-        var tree = new zebra.ui.tree.Tree({
+        var tree = new zebkit.ui.tree.Tree({
             value: "Root",
             kids: [
                 "Item 1",
@@ -1009,21 +1042,24 @@ pkg.BaseTree = Class(ui.Panel, [
         // set " [x] " text render for toggle on and
         // " [o] " text render for toggle off tree elements
         tree.setViews({
-            "on": new zebra.ui.TextRender(" [x] "),
-            "off": new zebra.ui.TextRender(" [o] ")
+            "on": new zebkit.ui.TextRender(" [x] "),
+            "off": new zebkit.ui.TextRender(" [o] ")
         });
 
      * @param {Object} v dictionary of tree component decorative elements views
      * @method setViews
      */
-    function setViews(v){
+    function setViews(v) {
+        // setting to 0 prevents exception when on/off view is not defined
+        this.viewSizes.on  = { width: 0, height : 0};
+        this.viewSizes.off = { width: 0, height : 0};
         for(var k in v) {
             if (v.hasOwnProperty(k)) {
                 var vv = ui.$view(v[k]);
 
                 this.views[k] = vv;
                 if (k != "aselect" && k != "iselect"){
-                    this.viewSizes[k] = vv ? vv.getPreferredSize() : null;
+                    this.viewSizes[k] = vv ? vv.getPreferredSize() : { width: 0, height : 0};
                     this.vrp();
                 }
             }
@@ -1032,13 +1068,13 @@ pkg.BaseTree = Class(ui.Panel, [
 
     /**
      * Set the given tree model to be visualized with the UI component.
-     * @param {zebra.data.TreeModel|Object} d a tree model
+     * @param {zebkit.data.TreeModel|Object} d a tree model
      * @method setModel
      */
     function setModel(d){
         if (this.model != d) {
-            if (zebra.instanceOf(d, zebra.data.TreeModel) === false) {
-                d = new zebra.data.TreeModel(d);
+            if (zebkit.instanceOf(d, zebkit.data.TreeModel) === false) {
+                d = new zebkit.data.TreeModel(d);
             }
 
             this.select(null);
@@ -1055,14 +1091,14 @@ pkg.BaseTree = Class(ui.Panel, [
     function invalidate(){
         if (this.isValid === true){
             this._isVal = false;
-            this.$super();
         }
+        this.$super();
     }
 ]);
 
 /**
  * Default tree editor provider
- * @class zebra.ui.tree.DefEditors
+ * @class zebkit.ui.tree.DefEditors
  */
 pkg.DefEditors = Class([
     function (){
@@ -1071,9 +1107,9 @@ pkg.DefEditors = Class([
          * @private
          * @readOnly
          * @attribute tf
-         * @type {zebra.ui.TextField}
+         * @type {zebkit.ui.TextField}
          */
-        this.tf = new ui.TextField(new zebra.data.SingleLineTxt(""));
+        this.tf = new ui.TextField(new zebkit.data.SingleLineTxt(""));
         this.tf.setBackground("white");
         this.tf.setBorder(null);
         this.tf.setPadding(0);
@@ -1082,9 +1118,9 @@ pkg.DefEditors = Class([
     function $prototype() {
         /**
          * Get an UI component to edit the given tree model element
-         * @param  {zebra.ui.tree.Tree} src a tree component
-         * @param  {zebra.data.Item} item an data model item
-         * @return {zebra.ui.Panel} an editor UI component
+         * @param  {zebkit.ui.tree.Tree} src a tree component
+         * @param  {zebkit.data.Item} item an data model item
+         * @return {zebkit.ui.Panel} an editor UI component
          * @method getEditor
          */
         this.getEditor = function(src,item){
@@ -1095,8 +1131,8 @@ pkg.DefEditors = Class([
 
         /**
          * Fetch a model item from the given UI editor component
-         * @param  {zebra.ui.tree.Tree} src a tree UI component
-         * @param  {zebra.ui.Panel} editor an editor that has been used to edit the tree model element
+         * @param  {zebkit.ui.tree.Tree} src a tree UI component
+         * @param  {zebkit.ui.Panel} editor an editor that has been used to edit the tree model element
          * @return {Object} an new tree model element value fetched from the given UI editor component
          * @method fetchEditedValue
          */
@@ -1106,21 +1142,21 @@ pkg.DefEditors = Class([
 
         /**
          * The method is called to ask if the given input event should trigger an tree component item
-         * @param  {zebra.ui.tree.Tree} src a tree UI component
-         * @param  {zebra.ui.MouseEvent|zebra.ui.KeyEvent} e   an input event: mouse or key event
+         * @param  {zebkit.ui.tree.Tree} src a tree UI component
+         * @param  {zebkit.ui.PointerEvent|zebkit.ui.KeyEvent} e   an input event: pointer or key event
          * @return {Boolean} true if the event should trigger edition of a tree component item
          * @method @shouldStartEdit
          */
         this.shouldStartEdit = function(src,e){
-            return (e.ID == ui.MouseEvent.CLICKED && e.clicks > 1) ||
-                   (e.ID == KE.PRESSED && e.code == KE.ENTER);
+            return  e.id === "pointerDoubleClicked" ||
+                   (e.id === "keyPressed" && e.code === ui.KeyEvent.ENTER);
         };
     }
 ]);
 
 /**
  * Default tree editor view provider
- * @class zebra.ui.tree.DefViews
+ * @class zebkit.ui.tree.DefViews
  * @constructor
  * @param {String} [color] the tree item text color
  * @param {String} [font] the tree item text font
@@ -1129,9 +1165,9 @@ pkg.DefViews = Class([
     function $prototype() {
         /**
          * Get a view for the given model item of the UI tree component
-         * @param  {zebra.ui.tree.Tree} tree  a tree component
-         * @param  {zebra.data.Item} item a tree model element
-         * @return {zebra.ui.View}  a view to visualize the given tree data model element
+         * @param  {zebkit.ui.tree.Tree} tree  a tree component
+         * @param  {zebkit.data.Item} item a tree model element
+         * @return {zebkit.ui.View}  a view to visualize the given tree data model element
          * @method  getView
          */
         this.getView = function (tree, item){
@@ -1144,7 +1180,7 @@ pkg.DefViews = Class([
 
         /**
          * Set the default view provider text render font
-         * @param {zebra.ui.Font} f a font
+         * @param {zebkit.ui.Font} f a font
          * @method setFont
          */
         this.setFont = function(f) {
@@ -1165,11 +1201,11 @@ pkg.DefViews = Class([
              * Default tree item render
              * @attribute render
              * @readOnly
-             * @type {zebra.ui.StringRender}
+             * @type {zebkit.ui.StringRender}
              */
             this.render = new ui.StringRender("");
 
-            zebra.properties(this, this.$clazz);
+            zebkit.properties(this, this.clazz);
 
             if (color != null) this.setColor(color);
             if (font  != null) this.setFont(font);
@@ -1179,29 +1215,29 @@ pkg.DefViews = Class([
 
 /**
  * Tree UI component that visualizes a tree data model. The model itself can be passed as JavaScript
- * structure or as a instance of zebra.data.TreeModel. Internally tree component keeps the model always
- * as zebra.data.TreeModel class instance:
+ * structure or as a instance of zebkit.data.TreeModel. Internally tree component keeps the model always
+ * as zebkit.data.TreeModel class instance:
 
-     var tree = new zebra.ui.tree.Tree({
+     var tree = new zebkit.ui.tree.Tree({
           value: "Root",
           kids : [  "Item 1", "Item 2"]
      });
 
  * or
 
-     var model = new zebra.data.TreeModel("Root");
+     var model = new zebkit.data.TreeModel("Root");
      model.add(model.root, "Item 1");
      model.add(model.root, "Item 2");
 
-     var tree = new zebra.ui.tree.Tree(model);
+     var tree = new zebkit.ui.tree.Tree(model);
 
  * Tree model rendering is fully customizable by defining an own views provider. Default views
  * provider renders tree model item as text. The tree node can be made editable by defining an
  * editor provider. By default tree modes are not editable.
- * @class  zebra.ui.tree.Tree
+ * @class  zebkit.ui.tree.Tree
  * @constructor
- * @extends zebra.ui.tree.BaseTree
- * @param {Object|zebra.data.TreeModel} [model] a tree data model passed as JavaScript
+ * @extends zebkit.ui.tree.BaseTree
+ * @param {Object|zebkit.data.TreeModel} [model] a tree data model passed as JavaScript
  * structure or as an instance
  * @param {Boolean} [b] the tree component items toggle state. true to have all items
  * in opened state.
@@ -1211,18 +1247,18 @@ pkg.Tree = Class(pkg.BaseTree, [
         this.itemGapY = 2;
         this.itemGapX = 4;
 
-        this.childInputEvent = function(e){
-            if (e.ID == KE.PRESSED){
-                if (e.code == KE.ESCAPE) {
-                    this.stopEditing(false);
-                }
-                else {
-                    if (e.code == KE.ENTER) {
-                        if ((zebra.instanceOf(e.source, ui.TextField) === false) ||
-                            (zebra.instanceOf(e.source.view.target, zebra.data.SingleLineTxt)))
-                        {
-                            this.stopEditing(true);
-                        }
+        this.childKeyPressed = function(e){
+            console.log("childKeyPressed : " + e.code);
+
+            if (e.code === ui.KeyEvent.ESCAPE) {
+                this.stopEditing(false);
+            }
+            else {
+                if (e.code === ui.KeyEvent.ENTER) {
+                    if ((zebkit.instanceOf(e.source, ui.TextField) === false) ||
+                        (zebkit.instanceOf(e.source.view.target, zebkit.data.SingleLineTxt)))
+                    {
+                        this.stopEditing(true);
                     }
                 }
             }
@@ -1258,17 +1294,17 @@ pkg.Tree = Class(pkg.BaseTree, [
 
         /**
          * Initiate the given item editing if the specified event matches condition
-         * @param  {zebra.data.Item} item an item to be edited
-         * @param  {zebra.ui.InputEvent} e an even that may trigger the item editing
+         * @param  {zebkit.data.Item} item an item to be edited
+         * @param  {zebkit.util.Event} e an even that may trigger the item editing
          * @return {Boolean}  return true if an item editing process has been started,
          * false otherwise
          * @method  se
          * @private
          */
-        this.se = function (item,e ){
+        this.se = function (item, e){
             if (item != null){
                 this.stopEditing(true);
-                if (this.editors != null && this.editors.shouldStartEdit(item, e)){
+                if (this.editors != null && this.editors.shouldStartEdit(item, e)) {
                     this.startEditing(item);
                     return true;
                 }
@@ -1276,21 +1312,26 @@ pkg.Tree = Class(pkg.BaseTree, [
             return false;
         };
 
-        this.mouseClicked = function(e){
+        this.pointerClicked = function(e){
+            if (this.se(this.pressedItem, e)) {
+                this.pressedItem = null;
+            }
+        };
+
+        this.pointerDoubleClicked = function(e) {
             if (this.se(this.pressedItem, e)) {
                 this.pressedItem = null;
             }
             else {
                 if (this.selected != null &&
-                    e.clicks > 1 && e.isActionMask() &&
-                   this.getItemAt(this.firstVisible, e.x, e.y) == this.selected)
+                    this.getItemAt(this.firstVisible, e.x, e.y) === this.selected)
                 {
                     this.toggle(this.selected);
                 }
             }
         };
 
-        this.mouseReleased = function(e){
+        this.pointerReleased = function(e){
             if (this.se(this.pressedItem, e)) this.pressedItem = null;
         };
 
@@ -1310,15 +1351,15 @@ pkg.Tree = Class(pkg.BaseTree, [
         this.keyPressed = function(e){
             var newSelection = null;
             switch(e.code) {
-                case KE.DOWN    :
-                case KE.RIGHT   : newSelection = this.findNext(this.selected);break;
-                case KE.UP      :
-                case KE.LEFT    : newSelection = this.findPrev(this.selected);break;
-                case KE.HOME    : if (e.isControlPressed()) this.select(this.model.root);break;
-                case KE.END     : if (e.isControlPressed()) this.select(this.findLast(this.model.root));break;
-                case KE.PAGEDOWN: if (this.selected != null) this.select(this.nextPage(this.selected, 1));break;
-                case KE.PAGEUP  : if (this.selected != null) this.select(this.nextPage(this.selected,  -1));break;
-                //!!!!case KE.ENTER: if(this.selected != null) this.toggle(this.selected);break;
+                case ui.KeyEvent.DOWN    :
+                case ui.KeyEvent.RIGHT   : newSelection = this.findNext(this.selected);break;
+                case ui.KeyEvent.UP      :
+                case ui.KeyEvent.LEFT    : newSelection = this.findPrev(this.selected);break;
+                case ui.KeyEvent.HOME    : if (e.ctrlKey) this.select(this.model.root);break;
+                case ui.KeyEvent.END     : if (e.ctrlKey) this.select(this.findLast(this.model.root));break;
+                case ui.KeyEvent.PAGEDOWN: if (this.selected != null) this.select(this.nextPage(this.selected, 1));break;
+                case ui.KeyEvent.PAGEUP  : if (this.selected != null) this.select(this.nextPage(this.selected,  -1));break;
+                //!!!!case ui.KeyEvent.ENTER: if(this.selected != null) this.toggle(this.selected);break;
             }
             if (newSelection != null) this.select(newSelection);
             this.se(this.selected, e);
@@ -1326,7 +1367,7 @@ pkg.Tree = Class(pkg.BaseTree, [
 
         /**
          * Start editing the given if an editor for the item has been defined.
-         * @param  {zebra.data.Item} item an item whose content has to be edited
+         * @param  {zebkit.data.Item} item an item whose content has to be edited
          * @method startEditing
          * @protected
          */
@@ -1334,18 +1375,19 @@ pkg.Tree = Class(pkg.BaseTree, [
             this.stopEditing(true);
             if (this.editors != null){
                 var editor = this.editors.getEditor(this, item);
-                if (editor != null){
+                if (editor != null) {
                     this.editedItem = item;
                     var b  = this.getItemBounds(this.editedItem),
                         ps = editor.getPreferredSize();
 
-                    editor.setLocation(b.x + this.scrollManager.getSX() + this.itemGapX,
-                                       b.y - ~~((ps.height - b.height + 2 * this.itemGapY) / 2) +
-                                      this.scrollManager.getSY() + this.itemGapY);
+                    editor.setBounds(b.x + this.scrollManager.getSX() + this.itemGapX,
+                                     b.y - Math.floor((ps.height - b.height + 2 * this.itemGapY) / 2) +
+                                     this.scrollManager.getSY() + this.itemGapY,
+                                     ps.width, ps.height);
 
-                    editor.setSize(ps.width, ps.height);
                     this.add(editor);
                     ui.focusManager.requestFocus(editor);
+                    this._.editingStarted(this, item, editor);
                 }
             }
         };
@@ -1358,34 +1400,40 @@ pkg.Tree = Class(pkg.BaseTree, [
          * @protected
          */
         this.stopEditing = function(applyData){
-            if (this.editors != null && this.editedItem != null){
+            if (this.editors != null && this.editedItem != null) {
+                var item     = this.editedItem,
+                    oldValue = item.value,
+                    editor   = this.kids[0];
+
                 try {
                     if (applyData)  {
                         this.model.setValue(this.editedItem,
                                             this.editors.fetchEditedValue(this.editedItem, this.kids[0]));
                     }
                 }
-                finally{
+                finally {
                     this.editedItem = null;
                     this.removeAt(0);
                     this.requestFocus();
+                    this._.editingStopped(this, item, oldValue, editor, applyData);
                 }
             }
         };
     },
 
-    function () { this.$this(null); },
-    function (d){ this.$this(d, true);},
+    function (d, b){
+        if (arguments.length < 2) {
+            b  = true;
+        }
 
-    function (d,b){
         this.provider = this.editedItem = this.pressedItem = null;
 
         /**
          * A tree model items view provider
          * @readOnly
          * @attribute provider
-         * @default an instance of zebra.ui.tree.DefsViews
-         * @type {zebra.ui.tree.DefsViews}
+         * @default an instance of zebkit.ui.tree.DefsViews
+         * @type {zebkit.ui.tree.DefsViews}
          */
 
         /**
@@ -1393,7 +1441,7 @@ pkg.Tree = Class(pkg.BaseTree, [
          * @readOnly
          * @attribute editors
          * @default null
-         * @type {zebra.ui.tree.DefEditors}
+         * @type {zebkit.ui.tree.DefEditors}
          */
 
         this.editors = null;
@@ -1401,9 +1449,9 @@ pkg.Tree = Class(pkg.BaseTree, [
         this.$super(d, b);
     },
 
-    function toggle() {
+    function toggle(item) {
         this.stopEditing(false);
-        this.$super();
+        this.$super(item);
     },
 
     function itemInserted(target,item){
@@ -1420,7 +1468,7 @@ pkg.Tree = Class(pkg.BaseTree, [
      * Set the given editor provider. The editor provider is a class that is used to decide which UI
      * component has to be used as an item editor, how the editing should be triggered and how the
      * edited value has to be fetched from an UI editor.
-     * @param {zebra.ui.tree.DefEditors} p an editor provider
+     * @param {zebkit.ui.tree.DefEditors} p an editor provider
      * @method setEditorProvider
      */
     function setEditorProvider(p){
@@ -1433,7 +1481,7 @@ pkg.Tree = Class(pkg.BaseTree, [
     /**
      * Set tree component items view provider. Provider says how tree model items
      * have to be visualized.
-     * @param {zebra.ui.tree.DefViews} p a view provider
+     * @param {zebkit.ui.tree.DefViews} p a view provider
      * @method setViewProvider
      */
     function setViewProvider(p){
@@ -1448,7 +1496,7 @@ pkg.Tree = Class(pkg.BaseTree, [
 
     /**
      * Set the given tree model to be visualized with the UI component.
-     * @param {zebra.data.TreeModel|Object} d a tree model
+     * @param {zebkit.data.TreeModel|Object} d a tree model
      * @method setModel
      */
     function setModel(d){
@@ -1467,7 +1515,7 @@ pkg.Tree = Class(pkg.BaseTree, [
         if (this.se(root, e) === false) this.pressedItem = root;
     },
 
-    function mousePressed(e){
+    function pointerPressed(e){
         this.pressedItem = null;
         this.stopEditing(true);
         this.$super(e);
@@ -1475,42 +1523,42 @@ pkg.Tree = Class(pkg.BaseTree, [
 ]);
 
 /**
- * Component tree component that expects other UI components to be a tree model values. 
- * In general the implementation lays out passed via tree model UI components as tree 
+ * Component tree component that expects other UI components to be a tree model values.
+ * In general the implementation lays out passed via tree model UI components as tree
  * component nodes. For instance:
 
-     var tree = new zebra.ui.tree.Tree({
-          value: new zebra.ui.Label("Label root item"),
+     var tree = new zebkit.ui.tree.Tree({
+          value: new zebkit.ui.Label("Label root item"),
           kids : [
-                new zebra.ui.Checkbox("Checkbox Item"),
-                new zebra.ui.Button("Button item"),
-                new zebra.ui.Combo(["Combo item 1", "Combo item 2"])
+                new zebkit.ui.Checkbox("Checkbox Item"),
+                new zebkit.ui.Button("Button item"),
+                new zebkit.ui.Combo(["Combo item 1", "Combo item 2"])
          ]
      });
 
- * But to prevent unexpected navigation it is better to use number of predefined 
- * with component tree UI components: 
+ * But to prevent unexpected navigation it is better to use number of predefined
+ * with component tree UI components:
 
-   - zebra.ui.tree.CompTree.Label
-   - zebra.ui.tree.CompTree.Checkbox
-   - zebra.ui.tree.CompTree.Combo
+   - zebkit.ui.tree.CompTree.Label
+   - zebkit.ui.tree.CompTree.Checkbox
+   - zebkit.ui.tree.CompTree.Combo
 
  * You can describe tree model keeping in mind special notation
 
-     var tree = new zebra.ui.tree.Tree({
-          value: "Label root item",  // zebra.ui.tree.CompTree.Label
+     var tree = new zebkit.ui.tree.Tree({
+          value: "Label root item",  // zebkit.ui.tree.CompTree.Label
           kids : [
-                "[ ] Checkbox Item 1", // unchecked zebra.ui.tree.CompTree.Checkbox
-                "[x] Checkbox Item 2", // checked zebra.ui.tree.CompTree.Checkbox
-                ["Combo item 1", "Combo item 2"] // zebra.ui.tree.CompTree.Combo
+                "[ ] Checkbox Item 1", // unchecked zebkit.ui.tree.CompTree.Checkbox
+                "[x] Checkbox Item 2", // checked zebkit.ui.tree.CompTree.Checkbox
+                ["Combo item 1", "Combo item 2"] // zebkit.ui.tree.CompTree.Combo
          ]
      });
 
  *
- * @class  zebra.ui.tree.CompTree
+ * @class  zebkit.ui.tree.CompTree
  * @constructor
- * @extends zebra.ui.tree.BaseTree
- * @param {Object|zebra.data.TreeModel} [model] a tree data model passed as JavaScript
+ * @extends zebkit.ui.tree.BaseTree
+ * @param {Object|zebkit.data.TreeModel} [model] a tree data model passed as JavaScript
  * structure or as an instance
  * @param {Boolean} [b] the tree component items toggle state. true to have all items
  * in opened state.
@@ -1527,55 +1575,64 @@ pkg.CompTree = Class(pkg.BaseTree, [
 
         this.Combo = Class(ui.Combo, [
             function keyPressed(e) {
-                if (e.code != KE.UP && e.code != KE.DOWN) this.$super(e);
+                if (e.code != ui.KeyEvent.UP && e.code != ui.KeyEvent.DOWN) {
+                    this.$super(e);
+                }
             }
         ]);
     },
 
     function $prototype() {
+        this.$blockCIE = false;
         this.canHaveFocus = false;
 
         this.getItemPreferredSize = function(root) {
             return root.value.getPreferredSize();
         };
 
-        this.childInputEvent = function(e) {
-            if (this.isSelectable) {
-                if (e.ID == ui.InputEvent.FOCUS_LOST) {
-                    this.select(null);
-                    return;
-                }
 
-                if (e.ID == ui.InputEvent.FOCUS_GAINED || e.ID == ui.MouseEvent.PRESSED) {
-                    var $this = this;
-                    zebra.data.find(this.model.root, zebra.layout.getDirectChild(this, e.source), function(item) {
-                        $this.select(item);
-                        return true;
-                    });
-                    return;
+        this.childKeyTyped = function(e) {
+            if (this.selected != null){
+                switch(e.ch) {
+                    case '+': if (this.isOpen(this.selected) === false) {
+                        this.toggle(this.selected);
+                    } break;
+                    case '-': if (this.isOpen(this.selected)) {
+                        this.toggle(this.selected);
+                    } break;
                 }
-
-                if (e.ID  == KE.PRESSED) {
-                    var newSelection = (e.code == KE.DOWN) ? this.findNext(this.selected) 
-                                                           : (e.code == KE.UP) ? this.findPrev(this.selected): null;
-                    if (newSelection != null) {
-                        this.select(newSelection);
-                    }
-                    return;
-                }      
             }
+        };
 
-            if (e.ID == KE.TYPED) {
-                if (this.selected != null){
-                    switch(e.ch) {
-                        case '+': if (this.isOpen(this.selected) === false) {
-                            this.toggle(this.selected);
-                        } break;
-                        case '-': if (this.isOpen(this.selected)) {
-                            this.toggle(this.selected);
-                        } break;
-                    }
+        this.childKeyPressed = function(e) {
+            if (this.isSelectable === true){
+                var newSelection = (e.code === ui.KeyEvent.DOWN) ? this.findNext(this.selected)
+                                                        : (e.code === ui.KeyEvent.UP) ? this.findPrev(this.selected)
+                                                                             : null;
+                if (newSelection != null) {
+                    this.select(newSelection);
                 }
+            }
+        };
+
+        this.childPointerPressed = this.childFocusGained = function(e) {
+            if (this.isSelectable === true && this.$blockCIE !== true) {
+                this.$blockCIE = true;
+                try {
+                    var item = zebkit.data.TreeModel.findOne(this.model.root,
+                                                            zebkit.layout.getDirectChild(this,
+                                                                                        e.source));
+                    if (item != null) this.select(item);
+                }
+                finally {
+                    this.$blockCIE = false;
+                }
+            }
+        };
+
+        this.childFocusLost = function(e) {
+            if (this.isSelectable === true) {
+                this.select(null);
             }
         };
 
@@ -1588,16 +1645,19 @@ pkg.CompTree = Class(pkg.BaseTree, [
 
             // hide all components
             for(var i=0; i < this.kids.length; i++) {
-                this.kids[i].isVisible = false;
+                this.kids[i].setVisible(false);
             }
+
 
             if (this.firstVisible != null) {
                 var $this = this, fvNode = this.getIM(this.firstVisible), started = 0;
 
-                this.model.iterate(this.model.root, function(item) {
-                    var node = $this.nodes[item];  // slightly improve performance (instead of calling $this.getIM(...))
 
-                    if (started === 0 && item == $this.firstVisible) {
+                this.model.iterate(this.model.root, function(item) {
+                    var node = $this.nodes[item];  // slightly improve performance
+                                                   // (instead of calling $this.getIM(...))
+
+                    if (started === 0 && item === $this.firstVisible) {
                         started = 1;
                     }
 
@@ -1605,11 +1665,14 @@ pkg.CompTree = Class(pkg.BaseTree, [
                         var sy = $this.scrollManager.getSY();
 
                         if (node.y + sy < $this.height) {
-                            var image = $this.getIconBounds(item);
+                            var image = $this.getIconBounds(item),
+                                x = image.x + image.width +
+                                           (image.width > 0 || $this.getToggleSize().width > 0 ? $this.gapx : 0) +
+                                           $this.scrollManager.getSX(),
+                                y = node.y + Math.floor((node.height - node.viewHeight) / 2) + sy;
 
-                            item.value.x = image.x + image.width + (image.width > 0 || $this.getToggleSize().width > 0 ? $this.gapx : 0) + $this.scrollManager.getSX();
-                            item.value.y = node.y + ~~((node.height - node.viewHeight) / 2) + sy;
-                            item.value.isVisible = true;
+                            item.value.setVisible(true);
+                            item.value.setLocation(x, y);
                             item.value.width  = node.viewWidth;
                             item.value.height = node.viewHeight;
                         }
@@ -1618,7 +1681,7 @@ pkg.CompTree = Class(pkg.BaseTree, [
                         }
                     }
 
-                    return (started === 2) ? 2 :  (node.isOpen === false ? 1 : 0);
+                    return (started === 2) ? 2 : (node.isOpen === false ? 1 : 0);
                 });
             }
         };
@@ -1644,7 +1707,7 @@ pkg.CompTree = Class(pkg.BaseTree, [
                 var $this = this;
                 this.model.iterate(this.model.root, function(item) {
                     if (item.value == null ||
-                        zebra.isString(item.value))
+                        zebkit.isString(item.value))
                     {
                         if (item.value == null) item.value = "";
                         item.value = item.value.trim();
@@ -1652,16 +1715,16 @@ pkg.CompTree = Class(pkg.BaseTree, [
                         var m = item.value.match(/\[\s*(.*)\s*\](.*)/);
 
                         if (m != null) {
-                            item.value = new $this.$clazz.Checkbox(m[2]);
+                            item.value = new $this.clazz.Checkbox(m[2]);
                             item.value.setValue(m[1].trim().length > 0);
                         }
                         else {
-                            item.value = new $this.$clazz.Label(item.value);
+                            item.value = new $this.clazz.Label(item.value);
                         }
                     }
                     else {
                         if (Array.isArray(item.value)) {
-                            item.value = new $this.$clazz.Combo(item.value);
+                            item.value = new $this.clazz.Combo(item.value);
                         }
                     }
 
@@ -1672,7 +1735,7 @@ pkg.CompTree = Class(pkg.BaseTree, [
     },
 
     function select(item) {
-        if (this.isSelectable && item != this.selected) {
+        if (this.isSelectable === true) {
             var old = this.selected;
 
             if (old != null && old.value.hasFocus()) {
@@ -1695,57 +1758,6 @@ pkg.CompTree = Class(pkg.BaseTree, [
 ]);
 
 /**
- * Toggle view element class
- * @class  zebra.ui.tree.TreeSignView
- * @extends {zebra.ui.View}
- * @constructor
- * @param  {Boolean} plus indicates the sign type plus (true) or minus (false)
- * @param  {String} color a color
- * @param  {String} bg a background
- */
-pkg.TreeSignView = Class(ui.View, [
-    function $prototype() {
-        this[''] = function(plus, color, bg) {
-            this.color = color == null ? "white" : color;
-            this.bg    = bg   == null ? "lightGray" : bg ;
-            this.plus  = plus == null ? false : plus;
-            this.br = new ui.Border("rgb(65, 131, 215)", 1, 3);
-            this.width = this.height = 12;
-        };
-
-        this.paint = function(g, x, y, w, h, d) {
-            this.br.outline(g, x, y, w, h, d);
-
-            g.setColor(this.bg);
-            g.fill();
-            this.br.paint(g, x, y, w, h, d);
-
-            g.setColor(this.color);
-            g.lineWidth = 2;
-            x+=2;
-            w-=4;
-            h-=4;
-            y+=2;
-            g.beginPath();
-            g.moveTo(x, y + h/2);
-            g.lineTo(x + w, y + h/2);
-            if (this.plus) {
-                g.moveTo(x + w/2, y);
-                g.lineTo(x + w/2, y + h);
-            }
-
-            g.stroke();
-            g.lineWidth = 1;
-        };
-
-        this.getPreferredSize = function() {
-            return { width:this.width, height:this.height};
-        };
-    }
-]);
-
-/**
  * @for
  */
-
-})(zebra("ui.tree"), zebra.Class, zebra.ui);
+});

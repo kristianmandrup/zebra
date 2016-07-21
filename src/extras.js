@@ -1,69 +1,20 @@
 (function(io, Class) {
     var CDNAME = '';
 
-    /**
-     * Get declared by this class methods.
-     * @param  {String} [name] a method name. The name can be used as a
-     * filter to exclude all methods whose name doesn't match the passed name
-     * @return {Array} an array of declared by the class methods
-     * @method  getMethods
-     */
-    zebra.getMethods = function(clazz, name)  {
-         var m = [];
-
-         // map user defined constructor to internal constructor name
-         if (name == CDNAME) name = zebra.CNAME;
-         for (var n in clazz.prototype) {
-             var f = clazz.prototype[n];
-             if (arguments.length > 0 && name != n) continue;
-             if (typeof f === 'function') {
-                if (f.$clone$ != null) {
-                    if (f.methods != null) {
-                        for (var mk in f.methods) m.push(f.methods[mk]);
-                    }
-                    else {
-                        m.push(f.f);
-                    }
-                }
-                else m.push(f);
-             }
-         }
-         return m;
-    };
-
-    zebra.getMethod = function(clazz, name, params) {
+    zebkit.getMethod = function(clazz, name) {
         // map user defined constructor to internal constructor name
-        if (name == CDNAME) name = zebra.CNAME;
+        if (name == CDNAME) name = zebkit.CNAME;
         var m = clazz.prototype[name];
-        if (typeof m === 'function') {
-            if (m.$clone$ != null) {
-                if (m.methods == null) {
-                    return m.f;
-                }
-
-                if (typeof params === "undefined")  {
-                    if (m.methods[0]) return m.methods[0];
-                    for(var k in m.methods) {
-                        if (m.methods.hasOwnProperty(k)) {
-                            return m.methods[k];
-                        }
-                    }
-                    return null;
-                }
-
-                m = m.methods[params];
-            }
-            if (m) return m;
-        }
-        return null;
+        return (typeof m === 'function') ?  m : null;
     };
 
     var isBA = typeof(ArrayBuffer) !== 'undefined';
+
     io.InputStream = Class([
-        function(container) {
+        function (container) {
             if (isBA && container instanceof ArrayBuffer) this.data = new Uint8Array(container);
             else {
-                if (zebra.isString(container)) {
+                if (zebkit.isString(container)) {
                     this.extend([
                         function read() {
                             return this.available() > 0 ? this.data.charCodeAt(this.pos++) & 0xFF : -1;
@@ -93,10 +44,20 @@
         },
 
         function close()   { this.pos = this.data.length; },
-        function read()    { return this.available() > 0 ? this.data[this.pos++] : -1; },
-        function read(buf) { return this.read(buf, 0, buf.length); },
 
         function read(buf, off, len) {
+            if (arguments.length === 0) {
+                return this.available() > 0 ? this.data[this.pos++] : -1;
+            }
+
+            if (off == null) {
+                off = 0;
+            }
+
+            if (len == null) {
+                len = buf.length;
+            }
+
             for(var i = 0; i < len; i++) {
                 var b = this.read();
                 if (b < 0) return i === 0 ? -1 : i;
@@ -138,10 +99,6 @@
     ]);
 
     io.URLInputStream = Class(io.InputStream, [
-        function(url) {
-            this.$this(url, null);
-        },
-
         function(url, f) {
             var r = io.getRequest(), $this = this;
             r.open("GET", url, f !== null);
@@ -155,7 +112,7 @@
                 r.onreadystatechange = function() {
                     if (r.readyState == 4) {
                         if (r.status != 200)  throw new Error(url);
-                        zebra.getMethod($this.$clazz.$parent, '', 1).call($this, isBA ? r.response : r.responseText); // $this.$super(res);
+                        zebkit.getMethod($this.clazz.$parent, '', 1).call($this, isBA ? r.response : r.responseText); // $this.$super(res);
                         f($this.data, r);
                     }
                 };
@@ -179,7 +136,7 @@
 
     // TODO: this is the new code that has to be documented, covered with test cases
     // and most likely the code has  to replace tasks !
-    zebra.Runner = function() {
+    zebkit.Runner = function() {
         this.$tasks   = [];
         this.$results = [];
         this.$head    = -1;
@@ -294,4 +251,4 @@
 
 
 
-})(zebra("io"), zebra.Class);
+})(zebkit("io"), zebkit.Class);

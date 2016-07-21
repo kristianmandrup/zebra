@@ -1,24 +1,26 @@
-(function(pkg, Class, ui) {
+zebkit.package("ui.designer", function(pkg, Class) {
+
+var ui = zebkit("ui");
 
 /**
- * The package contains number of UI components that can be helful to 
- * make visiual control of an UI component size and location
+ * The package contains number of UI components that can be helpful to
+ * make visual control of an UI component size and location
  * @module  ui.designer
- * @main 
+ * @main
  */
 
-var L = zebra.layout, Cursor = ui.Cursor, KeyEvent = ui.KeyEvent, CURSORS = [];
-
-CURSORS[L.LEFT  ] = Cursor.W_RESIZE;
-CURSORS[L.RIGHT ] = Cursor.E_RESIZE;
-CURSORS[L.TOP   ] = Cursor.N_RESIZE;
-CURSORS[L.BOTTOM] = Cursor.S_RESIZE;
-CURSORS[L.TopLeft ]    = Cursor.NW_RESIZE;
-CURSORS[L.TopRight]    = Cursor.NE_RESIZE;
-CURSORS[L.BottomLeft ] = Cursor.SW_RESIZE;
-CURSORS[L.BottomRight] = Cursor.SE_RESIZE;
-CURSORS[L.CENTER] = Cursor.MOVE;
-CURSORS[L.NONE  ] = Cursor.DEFAULT;
+pkg.CURSORS = {
+    left        : ui.Cursor.W_RESIZE,
+    right       : ui.Cursor.E_RESIZE,
+    top         : ui.Cursor.N_RESIZE,
+    bottom      : ui.Cursor.S_RESIZE,
+    topLeft     : ui.Cursor.NW_RESIZE,
+    topRight    : ui.Cursor.NE_RESIZE,
+    bottomLeft  : ui.Cursor.SW_RESIZE,
+    bottomRight : ui.Cursor.SE_RESIZE,
+    center      : ui.Cursor.MOVE,
+    none        : ui.Cursor.DEFAULT
+};
 
 pkg.ShaperBorder = Class(ui.View, [
     function $prototype() {
@@ -30,8 +32,8 @@ pkg.ShaperBorder = Class(ui.View, [
         }
 
         this.paint = function(g,x,y,w,h,d){
-            var cx = ~~((w - this.gap)/2),
-                cy = ~~((h - this.gap)/2);
+            var cx = Math.floor((w - this.gap)/2),
+                cy = Math.floor((h - this.gap)/2);
 
             g.setColor(this.color);
             g.beginPath();
@@ -44,27 +46,50 @@ pkg.ShaperBorder = Class(ui.View, [
             g.rect(x + w - this.gap, y + cy, this.gap, this.gap);
             g.rect(x + w - this.gap, y + h - this.gap, this.gap, this.gap);
             g.fill();
+
             g.beginPath();
-            g.rect(x + ~~(this.gap / 2), y + ~~(this.gap / 2), w - this.gap, h - this.gap);
+
+            var po = zebkit.layout.toParentOrigin(x + Math.floor(this.gap / 2), y + Math.floor(this.gap / 2), d);
+
+            // very strange thing with rect() method if it called with w or h
+            // without decreasing with gap it is ok, otherwise moving   a
+            // component with the border outside parent component area leaves
+            // traces !
+            //
+            // adding 0.5 (to center line) solves the problem with traces
+            g.rect(x + Math.floor(this.gap / 2) + 0.5,
+                   y + Math.floor(this.gap / 2) + 0.5,
+                   w - this.gap,
+                   h - this.gap );
+
             g.stroke();
         };
 
         this.detectAt = function(target,x,y){
-            var gap = this.gap, gap2 = gap*2, w = target.width, h = target.height;
+            var gap  = this.gap,
+                gap2 = gap * 2,
+                w    = target.width,
+                h    = target.height;
 
-            if (contains(x, y, gap, gap, w - gap2, h - gap2)) return L.CENTER;
-            if (contains(x, y, 0, 0, gap, gap))               return L.TopLeft;
-            if (contains(x, y, 0, h - gap, gap, gap))         return L.BottomLeft;
-            if (contains(x, y, w - gap, 0, gap, gap))         return L.TopRight;
-            if (contains(x, y, w - gap, h - gap, gap, gap))   return L.BottomRight;
+            if (contains(x, y, gap, gap, w - gap2, h - gap2)) return "center";
 
-            var mx = ~~((w-gap)/2);
-            if (contains(x, y, mx, 0, gap, gap))        return L.TOP;
-            if (contains(x, y, mx, h - gap, gap, gap))  return L.BOTTOM;
+            if (contains(x, y, 0, 0, gap, gap))               return "topLeft";
 
-            var my = ~~((h-gap)/2);
-            if (contains(x, y, 0, my, gap, gap)) return L.LEFT;
-            return contains(x, y, w - gap, my, gap, gap) ? L.RIGHT : L.NONE;
+            if (contains(x, y, 0, h - gap, gap, gap))         return "bottomLeft";
+
+            if (contains(x, y, w - gap, 0, gap, gap)) return "topRight";
+
+            if (contains(x, y, w - gap, h - gap, gap, gap)) return "bottomRight";
+
+            var mx = Math.floor((w - gap)/2);
+            if (contains(x, y, mx, 0, gap, gap))        return "top";
+
+            if (contains(x, y, mx, h - gap, gap, gap))  return "bottom";
+
+            var my = Math.floor((h - gap)/2);
+            if (contains(x, y, 0, my, gap, gap)) return "left";
+
+            return contains(x, y, w - gap, my, gap, gap) ? "right" : "none";
         };
     }
 ]);
@@ -72,30 +97,30 @@ pkg.ShaperBorder = Class(ui.View, [
 /**
  * This is UI component class that implements possibility to embeds another
  * UI components to control the component size and location visually.
- 
-        // create canvas 
-        var canvas = new zebra.ui.zCanvas(300,300);
+
+        // create canvas
+        var canvas = new zebkit.ui.zCanvas(300,300);
 
         // create two UI components
-        var lab = new zebra.ui.Label("Label");
-        var but = new zebra.ui.Button("Button");
+        var lab = new zebkit.ui.Label("Label");
+        var but = new zebkit.ui.Button("Button");
 
         // add created before label component as target of the shaper
-        // component and than add the shaper component into root panel 
-        canvas.root.add(new zebra.ui.designer.ShaperPan(lab).properties({
+        // component and than add the shaper component into root panel
+        canvas.root.add(new zebkit.ui.designer.ShaperPan(lab).properties({
             bounds: [ 30,30,100,40]
         }));
 
         // add created before button component as target of the shaper
-        // component and than add the shaper component into root panel 
-        canvas.root.add(new zebra.ui.designer.ShaperPan(but).properties({
+        // component and than add the shaper component into root panel
+        canvas.root.add(new zebkit.ui.designer.ShaperPan(but).properties({
             bounds: [ 130,130,100,50]
         }));
 
- * @class  zebra.ui.designer.ShaperPan
+ * @class  zebkit.ui.designer.ShaperPan
  * @constructor
- * @extends {zebra.ui.Panel}
- * @param {zebra.ui.Panel} target a target UI component whose size and location
+ * @extends {zebkit.ui.Panel}
+ * @param {zebkit.ui.Panel} target a target UI component whose size and location
  * has to be controlled
  */
 pkg.ShaperPan = Class(ui.Panel, [
@@ -115,14 +140,15 @@ pkg.ShaperPan = Class(ui.Panel, [
         */
 
         /**
-         * Minimal possible height or controlled component 
+         * Minimal possible height or controlled component
          * @attribute minHeight
          * @type {Integer}
          * @default 12
          */
 
+
         /**
-         * Minimal possible width or controlled component 
+         * Minimal possible width or controlled component
          * @attribute minWidth
          * @type {Integer}
          * @default 12
@@ -134,34 +160,41 @@ pkg.ShaperPan = Class(ui.Panel, [
         this.catchInput = true;
 
         this.getCursorType = function (t, x ,y) {
-            return this.kids.length > 0 ? CURSORS[this.shaperBr.detectAt(t, x, y)] : null;
+            return this.kids.length > 0 ? pkg.CURSORS[this.shaperBr.detectAt(t, x, y)] : null;
         };
 
         /**
          * Define key pressed events handler
-         * @param  {zebra.ui.KeyEvent} e a key event
+         * @param  {zebkit.ui.KeyEvent} e a key event
          * @method keyPressed
          */
         this.keyPressed = function(e) {
             if (this.kids.length > 0){
-                var b  = (e.mask & KeyEvent.M_SHIFT) > 0, 
+                var b  = e.shiftKey,
                     c  = e.code,
-                    dx = (c == KeyEvent.LEFT ?  -1 : (c == KeyEvent.RIGHT ? 1 : 0)),
-                    dy = (c == KeyEvent.UP   ?  -1 : (c == KeyEvent.DOWN  ? 1 : 0)),
-                    w  = this.width  + dx, 
+                    dx = (c === ui.KeyEvent.LEFT ? -1 : (c === ui.KeyEvent.RIGHT ? 1 : 0)),
+                    dy = (c === ui.KeyEvent.UP   ? -1 : (c === ui.KeyEvent.DOWN  ? 1 : 0)),
+                    w  = this.width  + dx,
                     h  = this.height + dy,
-                    x  = this.x + dx, 
+                    x  = this.x + dx,
                     y  = this.y + dy;
 
                 if (b) {
-                    if (this.isResizeEnabled && w > this.shaperBr.gap * 2 && h > this.shaperBr.gap * 2) {
+                    if (this.isResizeEnabled === true && w > this.shaperBr.gap * 2 && h > this.shaperBr.gap * 2) {
                         this.setSize(w, h);
                     }
                 }
                 else {
-                    if (this.isMoveEnabled) {
-                        var ww = this.width, hh = this.height, p = this.parent;
-                        if (x + ww/2 > 0 && y + hh/2 > 0 && x < p.width - ww/2 && y < p.height - hh/2) {
+                    if (this.isMoveEnabled === true) {
+                        var ww = this.width,
+                            hh = this.height,
+                            p  = this.parent;
+
+                        if (x + ww/2 > 0 &&
+                            y + hh/2 > 0 &&
+                            x < p.width - ww/2 &&
+                            y < p.height - hh/2)
+                        {
                             this.setLocation(x, y);
                         }
                     }
@@ -170,21 +203,21 @@ pkg.ShaperPan = Class(ui.Panel, [
         };
 
         /**
-         * Define mouse drag started events handler
-         * @param  {zebra.ui.MouseEvent} e a mouse event
-         * @method mouseDragStarted
+         * Define pointer drag started events handler
+         * @param  {zebkit.ui.PointerEvent} e a pointer event
+         * @method pointerDragStarted
          */
-        this.mouseDragStarted = function(e){
+        this.pointerDragStarted = function(e){
             this.state = null;
             if (this.isResizeEnabled || this.isMoveEnabled) {
                 var t = this.shaperBr.detectAt(this, e.x, e.y);
-                if ((this.isMoveEnabled   === true || t != L.CENTER)||
-                    (this.isResizeEnabled === true || t == L.CENTER)  )
+                if ((this.isMoveEnabled   === true || t !== "center")||
+                    (this.isResizeEnabled === true || t === "center")  )
                 {
-                    this.state = { top    : ((t & L.TOP   ) > 0 ? 1 : 0),
-                                   left   : ((t & L.LEFT  ) > 0 ? 1 : 0),
-                                   right  : ((t & L.RIGHT ) > 0 ? 1 : 0),
-                                   bottom : ((t & L.BOTTOM) > 0 ? 1 : 0) };
+                    this.state = { top    : (t === "top"    || t === "topLeft"     || t === "topRight"   ) ? 1 : 0,
+                                   left   : (t === "left"   || t === "topLeft"     || t === "bottomLeft" ) ? 1 : 0,
+                                   right  : (t === "right"  || t === "topRight"    || t === "bottomRight") ? 1 : 0,
+                                   bottom : (t === "bottom" || t === "bottomRight" || t === "bottomLeft" ) ? 1 : 0 };
 
                     if (this.state != null) {
                         this.px = e.absX;
@@ -195,14 +228,14 @@ pkg.ShaperPan = Class(ui.Panel, [
         };
 
         /**
-         * Define mouse dragged events handler
-         * @param  {zebra.ui.MouseEvent} e a mouse event
-         * @method mouseDragged
+         * Define pointer dragged events handler
+         * @param  {zebkit.ui.PointerEvent} e a pointer event
+         * @method pointerDragged
          */
-        this.mouseDragged = function(e){
+        this.pointerDragged = function(e){
             if (this.state != null) {
-                var dy = (e.absY - this.py), 
-                    dx = (e.absX - this.px), 
+                var dy = (e.absY - this.py),
+                    dx = (e.absX - this.px),
                     s  = this.state,
                     nw = this.width  - dx * s.left + dx * s.right,
                     nh = this.height - dy * s.top  + dy * s.bottom;
@@ -213,9 +246,9 @@ pkg.ShaperPan = Class(ui.Panel, [
                     if ((s.top + s.right + s.bottom + s.left) === 0) {
                         this.setLocation(this.x + dx, this.y + dy);
                     }
-                    else {                    
-                        this.setSize(nw, nh);
-                        this.setLocation(this.x + dx * s.left, this.y + dy * s.top);
+                    else {
+                        this.setBounds(this.x + dx * s.left, this.y + dy * s.top, nw, nh);
+                 //       this.invalidateLayout();
                     }
                 }
             }
@@ -229,7 +262,7 @@ pkg.ShaperPan = Class(ui.Panel, [
     },
 
     function (t){
-        this.$super(new L.BorderLayout());
+        this.$super(new zebkit.layout.BorderLayout());
         this.px = this.py = 0;
         this.shaperBr = new pkg.ShaperBorder();
         this.colors   = [ "lightGray", "blue" ];
@@ -245,10 +278,10 @@ pkg.ShaperPan = Class(ui.Panel, [
 
         var top = this.getTop(), left = this.getLeft();
         if (d.width === 0 || d.height === 0) d.toPreferredSize();
-        this.setLocation(d.x - left, d.y - top);
-        this.setSize(d.width + left + this.getRight(),
-                     d.height + top + this.getBottom());
-        this.$super(i, L.CENTER, d);
+        this.setBounds(d.x - left, d.y - top,
+                       d.width + left + this.getRight(),
+                       d.height + top + this.getBottom());
+        this.$super(i, "center", d);
     },
 
     function focused(){
@@ -258,7 +291,7 @@ pkg.ShaperPan = Class(ui.Panel, [
     }
 ]);
 
-pkg.FormTreeModel = Class(zebra.data.TreeModel, [
+pkg.FormTreeModel = Class(zebkit.data.TreeModel, [
     function $prototype() {
         this.buildModel = function(comp, root){
             var b    = this.exclude != null && this.exclude(comp),
@@ -276,7 +309,7 @@ pkg.FormTreeModel = Class(zebra.data.TreeModel, [
 
         this.itemByComponent = function (c, r){
             if (r == null) r = this.root;
-            if (r.comp == c) return c;
+            if (r.comp === c) return c;
             for(var i = 0;i < r.kids.length; i++) {
                 var item = this.itemByComponent(c, r.kids[i]);
                 if (item != null) return item;
@@ -285,10 +318,10 @@ pkg.FormTreeModel = Class(zebra.data.TreeModel, [
         };
 
         this.createItem = function(comp){
-            var name = comp.$clazz.$name;
+            var name = comp.clazz.$name;
             if (name == null) name = comp.toString();
             var index = name.lastIndexOf('.'),
-                item = new zebra.data.Item(index > 0 ? name.substring(index + 1) : name);
+                item = new zebkit.data.Item(index > 0 ? name.substring(index + 1) : name);
             item.comp = comp;
             return item;
         };
@@ -302,6 +335,4 @@ pkg.FormTreeModel = Class(zebra.data.TreeModel, [
 /**
  * @for
  */
-
-
-})(zebra("ui.designer"), zebra.Class, zebra("ui"));
+});
