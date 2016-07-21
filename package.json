@@ -10,21 +10,22 @@
         "url": "https://github.com/barmalei/zebra.git"
     },
     "author": "",
-    "license": "Apache",
+    "license": "Apache-2.0",
     "bugs": {
         "url": "https://github.com/barmalei/zebra/issues"
     },
     "homepage": "https://github.com/barmalei/zebra",
-    "devDependencies"   : {
-        "gulp"          : "^3.8.8",
-        "gulp-rename"   :  "latest",
-        "gulp-uglify"   : "latest",
-        "gulp-concat"   : "latest",
-        "gulp-wrap"     : "latest",
-        "gulp-webserver": "latest",
-        "gulp-zip"      : "latest",
-        "gulp-jshint"   : "latest",
-        "gulp-rm"       : "latest",
-        "gulp-expect-file"   : "latest"
+    "devDependencies": {
+        "gulp"              : "^3.8.8",
+        "gulp-rename"       :  "latest",
+        "gulp-uglify"       : "latest",
+        "gulp-concat"       : "latest",
+        "gulp-wrap"         : "latest",
+        "gulp-webserver"    : "latest",
+        "gulp-zip"          : "latest",
+        "gulp-jshint"       : "latest",
+        "jshint"            : "latest",
+        "gulp-rm"           : "latest",
+        "gulp-expect-file"  : "latest"
     }
 }
