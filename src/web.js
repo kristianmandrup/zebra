@@ -20,10 +20,13 @@
         // in landscape mode because of a bug (full page size is
         // just 1 pixels column more than video memory that can keep it)
         // So, just make width always one pixel less.
-        return  {
-                    width : window.innerWidth, //   - 1,
-                    height: window.innerHeight
-                };
+
+        return { width : document.documentElement.clientWidth - 1,
+                 height: document.documentElement.clientHeight };
+        // return  {
+        //             width : window.innerWidth, //   - 1,
+        //             height: window.innerHeight
+        //         };
     };
 
     pkg.$viewPortSize = function() {

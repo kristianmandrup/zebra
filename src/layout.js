@@ -457,10 +457,11 @@ pkg.Layoutable = Class(pkg.Layout, [
          * @method validate
          */
         this.validate = function() {
+            var isValid = this.isValid;
             if (this.isValid === false) this.validateMetric();
 
             if (this.width > 0 && this.height > 0 &&
-                this.isLayoutValid === false &&
+                (isValid === false || this.isLayoutValid === false) &&
                 this.isVisible === true)
             {
                 this.layout.doLayout(this);

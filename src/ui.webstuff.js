@@ -159,11 +159,19 @@ zebkit.package("ui", function(pkg, Class) {
     };
 
     var $wrt = null, $winSizeUpdated = false, $wpw = -1, $wph = -1;
-    window.addEventListener("resize", function(e) {
-        var ws = zebkit.web.$viewPortSize();
-        if ($wpw !== window.innerWidth || $wph !== window.innerHeight) {
-            $wpw = window.innerWidth;
-            $wph = window.innerHeight;
+    // window.addEventListener("resize", function(e) {
+    //     var ws = zebkit.web.$viewPortSize();
+    //     if ($wpw !== window.innerWidth || $wph !== window.innerHeight) {
+    //         $wpw = window.innerWidth;
+    //         $wph = window.innerHeight;
+
+        window.addEventListener("resize", function(e) {
+            if (wpw == document.documentElement.clientWidth && wph == document.documentElement.clientHeight) {
+                return;
+            }
+
+            wpw = document.documentElement.clientWidth;
+            wph = document.documentElement.clientHeight;
 
             if ($wrt != null) {
                 $winSizeUpdated = true;

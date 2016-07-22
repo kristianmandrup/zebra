@@ -209,11 +209,57 @@ pkg.Label = Class(pkg.ViewPan, [
     },
 
     function (r) {
-        this.setView(arguments.length === 0 ||
-                     zebkit.isString(r)      ? new pkg.StringRender(r)
-                                             : (zebkit.instanceOf(r, zebkit.data.TextModel) ? new pkg.TextRender(r)
-                                                                                            : r));
+        if (arguments.length > 0) {
+            this.setModel(r);
+        }
         this.$super();
+    }
+]);
+
+/**
+ * Label UI component class. The label can be used to visualize simple string which will be
+ * auto wrapped if the string length exceeds parent container width
+
+     // render simple string auto wrap
+     var l = new zebra.ui.Label("Auto wrap simple string");
+
+     // render multi lines auto wrap text
+     var l = new zebra.ui.Label(new zebra.data.AutoWrapText("Auto wrap\nmultiline\ntext"));
+
+ * @param  {String|zebra.data.AutoWrapText} [r] a text to be shown with the label.
+ * You can pass a simple string or an instance of a AutoWrapText.
+ * @constructor
+ * @class zebra.ui.AutoWrapLabel
+ * @extends zebra.ui.Label
+ */
+pkg.AutoWrapLabel = Class(pkg.Label, [
+    function setModel(m) {
+        var render = m;
+        if (zebra.isString(m)) {
+            var text = new zebra.data.AutoWrapText(m);
+            var render = new pkg.TextRender(text);
+            text.setFont(render.font);
+        } else if (zebra.instanceOf(m, zebra.data.AutoWrapText)) {
+            render = new pkg.TextRender(m);
+        } else {
+            throw new Error("Invalid argument type, only string or AutoWrapText are supported");
+        }
+        this.setView(render);
+    },
+    function setFont(f) {
+        var model = this.getModel();
+        if (model != null && zebra.instanceOf(model, zebra.data.AutoWrapText)) {
+            model.setFont(f);
+        }
+        return this.$super(f);
+    },
+    function resized(prevWidth, prevHeight) {
+        var model = this.getModel();
+        if (model != null && zebra.instanceOf(model, zebra.data.AutoWrapText)) {
+            // this will invalidate all
+            model.setMaxWidth(this.width);
+        }
+        this.$super(prevWidth, prevHeight);
     }
 ]);
 
@@ -2867,13 +2913,12 @@ pkg.ScrollPan = Class(pkg.Panel, [
 
                 this.doLayout = function(t) {
                     var kid = t.kids[0];
-                    if (kid.constraints === "stretch") {
-                        var ps = kid.getPreferredSize(),
-                            w  = t.parent.hBar != null ? ps.width : t.width,
-                            h  = t.parent.vBar != null ? ps.height : t.height;
+                    if (kid.constraints === L.STRETCH) {
+                        var ps = kid.getPreferredSize();
+                        var w = t.parent.hBar != null ? ps.width : t.width;
+                        var h = t.parent.vBar != null ? ps.height : t.height;
                         kid.setSize(w, h);
-                    }
-                    else {
+                    } else {
                         kid.toPreferredSize();
                     }
                 };
@@ -5038,14 +5083,26 @@ pkg.MobileScrollMan = Class(pkg.Manager, [
                 this.$timer  === null  &&
                 this.$identifier === e.identifier &&
                 (e.direction === "bottom" || e.direction === "top") &&
-                this.$target.vBar != null &&
-                this.$target.vBar.isVisible &&
+                this.target.vBar != null &&
+                this.target.vBar.isVisible === true &&
                 e.dy !== 0)
             {
                 this.$dt = 2 * e.dy;
-                this.$counter = 0;
-                var $this = this;
-                this.$timer = setInterval(function() { $this.$taskMethod($this); } , 50);
+                var $this = this, bar = this.target.vBar, k = 0;
+
+                this.timer = setInterval(function() {
+                    var o = bar.position.offset;
+
+                    bar.position.setOffset(o - $this.$dt);
+                    if (++k % 5 === 0) {
+                        $this.$dt = Math.floor($this.$dt/2);
+                    }
+
+                    if (o === bar.position.offset || ($this.$dt >= -1  &&  $this.$dt <= 1)) {
+                        clearInterval($this.timer);
+                        $this.timer = $this.target = null;
+                    }
+                }, 10);
             }
         };
 

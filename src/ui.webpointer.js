@@ -200,8 +200,58 @@ pkg.MouseWheelSupport = Class([
                             dx *= $clazz.dxZoom;
                         }
 
+<<<<<<< HEAD
                         dy = Math.abs(dy) > $clazz.dyNorma ? dy % $clazz.dyNorma : dy;
                         dx = Math.abs(dx) > $clazz.dxNorma ? dx % $clazz.dxNorma : dx;
+=======
+            this.$DRAG = function(id, e, stub) {
+                // get appropriate pointerPressed event that has occurred before
+                var mp = $pointerPressedEvents[id];
+
+                // a pointer touched has been pressed and pressed target zebra component exists
+                // emulate mouse dragging events if mouse has moved on the canvas where mouse
+                // pressed event occurred
+                if (mp != null) {
+                    // ignore moved if there still start events that are waiting for to be fired
+                    if (mp.$adapter.element === this.element) {
+                        // target component exists and mouse cursor moved on the same
+                        // canvas where mouse pressed occurred
+                        if (this.$timer === null) {
+                            stub.$fillWith(id, e);
+
+                            var dx = stub.pageX - mp.pageX,
+                                dy = stub.pageY - mp.pageY,
+                                d  = mp.direction;
+
+                            // accumulate shifting of pointer
+                            mp.$adx += dx;
+                            mp.$ady += dy;
+
+                            // update stored touch coordinates with a new one
+                            mp.pageX  = stub.pageX;
+                            mp.pageY  = stub.pageY;
+
+                            // we can recognize direction only if move was not too small
+                            if (Math.abs(mp.$adx) > 4 || Math.abs(mp.$ady) > 4) {
+                                // compute gamma, this is corner in polar coordinate system
+                                var gamma = Math.atan2(mp.$ady, mp.$adx);
+
+                                // using gamma we can figure out direction
+                                if (gamma > -PI4) {
+                                    d = (gamma < PI4) ? "right" : (gamma < PI4_3 ? "bottom" : "left");
+                                }
+                                else {
+                                    d = (gamma > -PI4_3) ? "top" : "left";
+                                }
+
+                                mp.direction = d;
+
+                                // clear accumulated shift
+                                mp.$ady = mp.$adx = 0;
+
+                                mp.gamma = gamma;
+                            }
+>>>>>>> 98ba0da9651070ce827f1aa286d66d597159ffcb
 
 
                         // do floor since some mouse devices can fire float as
@@ -833,6 +883,7 @@ pkg.PointerEventUnifier = Class([
                 }
             }, false);
 
+<<<<<<< HEAD
             element.addEventListener(names[2], function(e) {
                 if (e.pointerType !== "mouse") {
                     POINTER_STUB.touch = e;
@@ -851,6 +902,16 @@ pkg.PointerEventUnifier = Class([
                 }
                 return false;
             }
+=======
+                    //!!!
+                    //TODO: this calling prevents generation of phantom mouse move event
+                    //but it is not clear if it will stop firing touch end/move events
+                    //for some mobile browsers. Check it !
+                    var tagName = e.target.tagName.toLowerCase();
+                    if (tagName !== 'input' && tagName !== 'textarea' || e.target.hasAttribute('readonly')) {
+                        e.preventDefault();
+                    }
+>>>>>>> 98ba0da9651070ce827f1aa286d66d597159ffcb
 
             element.addEventListener("touchstart", function(e) {
                 var allTouches = e.touches,
@@ -890,11 +951,21 @@ pkg.PointerEventUnifier = Class([
                     }
                 }
 
+<<<<<<< HEAD
                 //!!!
                 //TODO: this calling prevents generation of phantom mouse move event
                 //but it is not clear if it will stop firing touch end/move events
                 //for some mobile browsers. Check it !
                 e.preventDefault();
+=======
+                    console.log("2. touchend() " + TOUCH_STUB.touchCounter);
+                    var tagName = e.target.tagName.toLowerCase();
+                    if (tagName !== 'input' && tagName !== 'textarea' || e.target.hasAttribute('readonly')) {
+                        e.preventDefault();
+                    }
+
+                }, false);
+>>>>>>> 98ba0da9651070ce827f1aa286d66d597159ffcb
 
             }, false);
 
@@ -909,8 +980,17 @@ pkg.PointerEventUnifier = Class([
                 e.preventDefault();
             }, false);
 
+<<<<<<< HEAD
             element.addEventListener("touchmove", function(e) {
                 var mt = e.changedTouches;
+=======
+                        if (t != null && (t.pageX != Math.floor(nmt.pageX) ||
+                                          t.pageY != Math.floor(nmt.pageY))  )
+                        {
+                            $this.$DRAG(nmt.identifier, nmt, TOUCH_STUB);
+                        }
+                    }
+>>>>>>> 98ba0da9651070ce827f1aa286d66d597159ffcb
 
                 // clear dx, dy for not updated touches
                 for(var k in $this.touches) {

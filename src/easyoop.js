@@ -256,6 +256,7 @@ if (typeof pkg.$global.Map === "undefined") {
     pkg.$global.Map = pkg.$MapImplementation();
 }
 
+
 pkg.clone = function (obj, map) {
     // clone atomic type
     if (obj == null || zebkit.isString(obj) || zebkit.isBoolean(obj) || zebkit.isNumber(obj)) {
