@@ -19,6 +19,7 @@ pkg.CURSORS = {
     bottomLeft  : ui.Cursor.SW_RESIZE,
     bottomRight : ui.Cursor.SE_RESIZE,
     center      : ui.Cursor.MOVE,
+    rotate      : ui.Cursor.ROTATE,
     none        : ui.Cursor.DEFAULT
 };
 
@@ -37,6 +38,8 @@ pkg.ShaperBorder = Class(ui.View, [
 
             g.setColor(this.color);
             g.beginPath();
+
+            // draw each handle
             g.rect(x, y, this.gap, this.gap);
             g.rect(x + cx, y, this.gap, this.gap);
             g.rect(x, y + cy, this.gap, this.gap);
@@ -45,6 +48,10 @@ pkg.ShaperBorder = Class(ui.View, [
             g.rect(x + cx, y + h - this.gap, this.gap, this.gap);
             g.rect(x + w - this.gap, y + cy, this.gap, this.gap);
             g.rect(x + w - this.gap, y + h - this.gap, this.gap, this.gap);
+
+            // rotator handle
+            // g.rect(x + w - this.gap/2, y - 10, this.gap, this.gap);
+
             g.fill();
 
             g.beginPath();
@@ -75,9 +82,13 @@ pkg.ShaperBorder = Class(ui.View, [
 
             if (contains(x, y, 0, 0, gap, gap))               return "topLeft";
 
-            if (contains(x, y, 0, h - gap, gap, gap))         return "bottomLeft";
+            // rotator - topCenter
+            // if (contains(x, y, w - gap/2, h - 10 - gap/2, w - gap2, h - gap2)) return "rotate";
 
             if (contains(x, y, w - gap, 0, gap, gap)) return "topRight";
+
+            if (contains(x, y, 0, h - gap, gap, gap))         return "bottomLeft";
+
 
             if (contains(x, y, w - gap, h - gap, gap, gap)) return "bottomRight";
 
@@ -219,6 +230,8 @@ pkg.ShaperPan = Class(ui.Panel, [
                                    right  : (t === "right"  || t === "topRight"    || t === "bottomRight") ? 1 : 0,
                                    bottom : (t === "bottom" || t === "bottomRight" || t === "bottomLeft" ) ? 1 : 0 };
 
+                    this.state.rotate = t === "rotate";
+
                     if (this.state != null) {
                         this.px = e.absX;
                         this.py = e.absY;
@@ -239,6 +252,13 @@ pkg.ShaperPan = Class(ui.Panel, [
                     s  = this.state,
                     nw = this.width  - dx * s.left + dx * s.right,
                     nh = this.height - dy * s.top  + dy * s.bottom;
+
+                if (this.state.rotate) {
+                    var angle = Math.atan2(dy, dx);
+                    angle_in_degrees = angle * 180/pi
+                    this.setAngle(angle);
+                    return;
+                }
 
                 if (nw >= this.minWidth && nh >= this.minHeight) {
                     this.px = e.absX;
