@@ -42,6 +42,10 @@ pkg.ShaperBorder = Class(ui.View, [
             // draw each handle
             g.rect(x, y, this.gap, this.gap);
             g.rect(x + cx, y, this.gap, this.gap);
+
+            // rotator handle
+            g.rect(x + cx/2, y - this.gap/4, this.gap, this.gap);
+
             g.rect(x, y + cy, this.gap, this.gap);
             g.rect(x + w - this.gap, y, this.gap, this.gap);
             g.rect(x, y + h - this.gap, this.gap, this.gap);
@@ -49,8 +53,6 @@ pkg.ShaperBorder = Class(ui.View, [
             g.rect(x + w - this.gap, y + cy, this.gap, this.gap);
             g.rect(x + w - this.gap, y + h - this.gap, this.gap, this.gap);
 
-            // rotator handle
-            // g.rect(x + w - this.gap/2, y - 10, this.gap, this.gap);
 
             g.fill();
 
